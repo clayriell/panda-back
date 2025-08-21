@@ -4,16 +4,7 @@ const bcrypt = require("bcrypt");
 module.exports = {
   register: async (req, res) => {
     try {
-      const {
-        username,
-        name,
-        email,
-        password,
-        role,
-        picture,
-        companyId,
-        isActive,
-      } = req.body;
+      const { username, name, email, password, companyId } = req.body;
 
       // cek email atau username sudah ada
       const existingUser = await prisma.user.findFirst({
@@ -38,10 +29,10 @@ module.exports = {
           name,
           email,
           password: hashedPassword,
-          role,
-          picture: picture || "",
+          role: "ADMIN",
+          picture: "",
           companyId,
-          isActive: isActive ?? false,
+          isActive: false,
         },
       });
 
@@ -55,6 +46,88 @@ module.exports = {
           role: user.role,
           companyId: user.companyId,
           isActive: user.isActive,
+        },
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
+    }
+  },
+
+  getAll: async (req, res) => {
+    try {
+      const user = await prisma.user.findMany();
+
+      return res.status(200).json({
+        message: "Success get all user data",
+        data: user,
+      });
+    } catch (error) {
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
+    }
+  },
+  activate: async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const user = await prisma.user.findUnique({ where: { id: Number(id) } });
+
+      if (!user) {
+        return res.status(404).json({
+          message: "User tidak ditemukan",
+        });
+      }
+
+      if (user.isActive) {
+        return res.status(400).json({ message: "User sudah diaktivasi" });
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id: Number(id) },
+        data: { isActive: true },
+      });
+
+      res.json({
+        message: "User berhasil diaktifkan",
+        user: {
+          id: updatedUser.id,
+          username: updatedUser.username,
+          isActive: updatedUser.isActive,
+        },
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Server error" });
+    }
+  },
+  deactivate: async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const user = await prisma.user.findUnique({ where: { id: Number(id) } });
+
+      if (!user) {
+        return res.status(404).json({
+          message: "User tidak ditemukan",
+        });
+      }
+
+      if (!user.isActive) {
+        return res.status(400).json({ message: "User sudah tidak aktif" });
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id: Number(id) },
+        data: { isActive: false },
+      });
+
+      res.json({
+        message: "User berhasil dinonaktifkan",
+        user: {
+          id: updatedUser.id,
+          username: updatedUser.username,
+          isActive: updatedUser.isActive,
         },
       });
     } catch (err) {
