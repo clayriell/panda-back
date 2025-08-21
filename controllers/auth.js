@@ -5,7 +5,6 @@ const bcrypt = require("bcrypt");
 const JWT_SECRET = process.env.JWT_SECRET;
 
 module.exports = {
-  
   login: async (req, res) => {
     try {
       const { identifier, password } = req.body;
@@ -29,7 +28,12 @@ module.exports = {
 
       // generate JWT
       const token = jwt.sign(
-        { id: user.id, role: user.role, companyId: user.companyId },
+        {
+          id: user.id,
+          role: user.role,
+          companyId: user.companyId,
+          isActive: user.isActive,
+        },
         JWT_SECRET,
         { expiresIn: "1d" }
       );

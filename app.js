@@ -1,12 +1,20 @@
 const express = require("express");
 const routes = require("./routes");
 const morgan = require("morgan");
+const cors = require("cors");
 
 const app = express();
 
 // Middleware
 app.use(express.json());
 app.use(morgan("dev"));
+
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
 
 // Routes
 app.use("/api", routes);
