@@ -1,0 +1,171 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Agency {
+  id        Int @id @default(autoincrement())
+  name      String
+  address   String
+  picName   String
+  picNumber String
+  email     String
+  
+  pilotageService PilotageService[]
+  }
+
+model AssistTug {
+  id        Int       @id @default(autoincrement())
+  shipName  String
+  master    String
+  horsePower Int
+  companyId Int?
+  company   Company?  @relation(fields: [companyId], references: [id])
+
+  tugDetails TugServiceDetail[]
+}
+
+model Company {
+  id       Int              @id @default(autoincrement())
+  name     String
+  users    User[]
+  services PilotageService[]
+  tugs     AssistTug[]
+}
+
+model PilotageService {
+  id             Int           @id @default(autoincrement())
+  docNumber      String?
+  idJasa         Int?        // data eksternal
+  agencyId       Int          // mungkin perlu tabel Agency nanti?
+  companyId      Int?
+  company        Company?      @relation(fields: [companyId], references: [id])
+  activity       Activity @default(BERTHING)
+  terminalStartId Int?
+  terminalEndId   Int?
+  lastPort       String?
+  nextPort       String?
+  pilotId        Int?
+  startDate      DateTime @db.Date @default(dbgenerated("CURRENT_DATE"))
+  startTime      DateTime @db.Time @default(dbgenerated("CURRENT_TIME"))
+  endDate        DateTime? @db.Date
+  endTime        DateTime? @db.Time
+  note           String?
+  status         ServiceStatus @default(REQUESTED)
+  amount         Decimal       @db.Decimal(10,2)
+  rate           Int           @default(5)
+  submitTime     DateTime?
+  submittedBy    Int?
+  submittedUser  User?         @relation("submittedBy", fields: [submittedBy], references: [id])
+  createdBy      Int?
+  creator        User?         @relation("createdBy", fields: [createdBy], references: [id])
+
+  shipDetails    ShipDetail[]
+  tugServices    TugService[]
+  terminalStart  Terminal?    @relation("StartTerminal", fields: [terminalStartId], references: [id])
+  terminalEnd    Terminal?    @relation("EndTerminal", fields: [terminalEndId], references: [id])
+  agency         Agency @relation(fields:[agencyId], references:[id])
+}
+
+model ShipDetail {
+  id                Int              @id @default(autoincrement())
+  pilotageServiceId Int
+  pilotageService   PilotageService  @relation(fields: [pilotageServiceId], references: [id])
+  shipName          String
+  master            String
+  grt               Int?
+  loa               Int?
+  flag              String?
+}
+
+model Terminal {
+  id     Int     @id @default(autoincrement())
+  code   String  @unique
+  name   String
+  area   Area    @default(TANJUNG_UNCANG)
+
+  pilotageServicesStart PilotageService[] @relation("StartTerminal")
+  pilotageServicesEnd   PilotageService[] @relation("EndTerminal")
+}
+
+model TugService {
+  id                Int              @id @default(autoincrement())
+  pilotageServiceId Int
+  pilotageService   PilotageService  @relation(fields: [pilotageServiceId], references: [id])
+  idJasa            Int?           // eksternal
+  status            ServiceStatus    @default(APPROVED)
+  amount            Decimal          @db.Decimal(10,2)
+
+  tugDetails        TugServiceDetail[]
+}
+
+model TugServiceDetail {
+  id          Int        @id @default(autoincrement())
+  tugServiceId Int
+  tugService   TugService @relation(fields: [tugServiceId], references: [id])
+  assistTugId Int
+  assistTug   AssistTug  @relation(fields: [assistTugId], references: [id])
+  connectTime DateTime?
+  disconnectTime DateTime?
+}
+
+model User {
+  id        Int              @id @default(autoincrement())
+  username  String?           @unique
+  name      String
+  email     String           @unique
+  password  String  @db.VarChar(255)
+  role      Role             @default(ADMIN)
+  picture   String?
+  companyId Int?
+  isActive  Boolean          @default(false)
+  company   Company?         @relation(fields: [companyId], references: [id])
+  
+  // relation ke pilotageService (submitter & creator)
+  submittedServices PilotageService[] @relation("submittedBy")
+  createdServices   PilotageService[] @relation("createdBy")
+}
+
+enum pilotageservice_status {
+  REQUESTED
+  APPROVED
+  IN_PROCESS
+  COMPLETED
+  SUBMITED
+  REJECTED
+  PAID
+  CANCELED
+}
+
+enum Area {
+  TANJUNG_UNCANG
+  BATU_AMPAR
+  KABIL
+}
+
+enum ServiceStatus {
+  REQUESTED
+  APPROVED
+  IN_PROCESS
+  COMPLETED
+  SUBMITED
+  REJECTED
+  PAID
+  CANCELED
+}
+
+enum Role {
+  SYS_ADMIN
+  ADMIN
+  PILOT
+}
+enum Activity {
+  BERTHING
+  UNBERTHING
+  SEA_TRIAL
+  SHIFTING
+}
