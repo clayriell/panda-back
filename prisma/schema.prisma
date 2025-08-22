@@ -145,6 +145,8 @@ enum Area {
   TANJUNG_UNCANG
   BATU_AMPAR
   KABIL
+  REMPANG_GALANG
+  LAUT
 }
 
 enum ServiceStatus {
