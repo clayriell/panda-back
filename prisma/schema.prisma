@@ -51,13 +51,13 @@ model PilotageService {
   nextPort       String?
   pilotId        Int?
   startDate      DateTime @db.Date @default(dbgenerated("CURRENT_DATE"))
-  startTime      DateTime @db.Time @default(dbgenerated("CURRENT_TIME"))
+  startTime      String @db.Time @default(dbgenerated("CURRENT_TIME"))
   endDate        DateTime? @db.Date
   endTime        DateTime? @db.Time
   note           String?
   status         ServiceStatus @default(REQUESTED)
   amount         Decimal       @db.Decimal(10,2)
-  rate           Int           @default(5)
+  rate           Int?           
   submitTime     DateTime?
   submittedBy    Int?
   submittedUser  User?         @relation("submittedBy", fields: [submittedBy], references: [id])
