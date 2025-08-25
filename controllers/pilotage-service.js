@@ -84,10 +84,7 @@ module.exports = {
 
       if (Array.isArray(tugServices)) {
         for (const tug of tugServices) {
-          if (
-            !Array.isArray(tug.tugDetails) ||
-            tug.tugDetails.length === 0
-          ) {
+          if (!Array.isArray(tug.tugDetails) || tug.tugDetails.length === 0) {
             return res.status(400).json({
               status: false,
               message:
@@ -188,6 +185,56 @@ module.exports = {
       return res.status(500).json({
         status: false,
         message: "Internal server error",
+      });
+    }
+  },
+  approve: async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const serviceExist = await prisma.pilotageService.findUnique({
+        where: { id: Number(id) },
+      });
+
+      if (!serviceExist) {
+        return res.status(404).json({
+          status: false,
+          message: "Pilotage Service not found.",
+        });
+      }
+
+      if (serviceExist.status === "APPROVED") {
+        return res.status(409).json({
+          status: false,
+          message: "Pilotage Service already approved.",
+        });
+      }
+
+      if (serviceExist.status !== "REQUESTED") {
+        return res.status(400).json({
+          status: false,
+          message: "Invalid Pilotage Service status.",
+        });
+      }
+
+      const approvedService = await prisma.pilotageService.update({
+        where: { id: serviceExist.id },
+        data: {
+          status: "APPROVED",
+        },
+      });
+
+      return res.status(200).json({
+        status: true,
+        message: "Pilotage Service Approved!",
+        data: approvedService,
+      });
+    } catch (error) {
+      console.error("Error approving service:", error);
+      return res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message,
       });
     }
   },
