@@ -135,4 +135,26 @@ module.exports = {
       res.status(500).json({ message: "Server error" });
     }
   },
+  profile: async (req, res) => {
+    const user = req.user;
+    try {
+      const userExist = await prisma.user.findUnique({
+        where: { username: user.username },
+      });
+
+      if (!userExist) {
+        return res.status(401).json({
+          status: false,
+          message: "User not found",
+        });
+      }
+      return res.status(200).json({
+        status: true,
+        message: "Success get user data",
+        data: userExist,
+      });
+    } catch (error) {
+      return res.status(500).json({ status: false, message: error });
+    }
+  },
 };

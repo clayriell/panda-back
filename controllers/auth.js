@@ -33,6 +33,7 @@ module.exports = {
           role: user.role,
           companyId: user.companyId,
           isActive: user.isActive,
+          username: user.username,
         },
         JWT_SECRET,
         { expiresIn: "1d" }

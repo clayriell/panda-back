@@ -1,3 +1,4 @@
+const { pilotageservice_status } = require("@prisma/client");
 const prisma = require("../config/db");
 
 module.exports = {
@@ -188,18 +189,90 @@ module.exports = {
       });
     }
   },
+
+  detail: async (req, res) => {
+    try {
+      const user = req.user;
+      const { id } = req.params;
+
+      const service = await prisma.pilotageService.findUnique({
+        where: { id: Number(id) },
+        include: {
+          agency: {
+            select: {
+              name: true,
+            },
+          },
+          terminalStart: {
+            select: {
+              name: true,
+            },
+          },
+          terminalEnd: { select: { name: true } },
+          tugServices: {
+            select: {
+              tugDetails: {
+                select: {
+                  assistTug: { select: { shipName: true } },
+                  connectTime: true,
+                  disconnectTime: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!service) {
+        return res.status(404).json({
+          status: false,
+          mesasge: "pilotage service not found",
+        });
+      }
+
+      if (user.companyId !== service.companyId) {
+        return res.status(403).json({
+          status: false,
+          message: "Forbidden access user, please check your company",
+        });
+      }
+
+      return res.status(200).json({
+        status: true,
+        message: "success get pilotage service detail",
+        data: service,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
+  },
+
   approve: async (req, res) => {
     try {
       const { id } = req.params;
+      const user = req.user;
 
+      // Ambil service + relasi tugServices untuk validasi awal
       const serviceExist = await prisma.pilotageService.findUnique({
         where: { id: Number(id) },
+        include: { tugServices: true },
       });
 
       if (!serviceExist) {
-        return res.status(404).json({
+        return res
+          .status(404)
+          .json({ status: false, message: "Pilotage Service not found." });
+      }
+
+      if (user.companyId !== serviceExist.companyId) {
+        // 403 lebih tepat untuk forbidden
+        return res.status(403).json({
           status: false,
-          message: "Pilotage Service not found.",
+          message: "Forbidden access user, please check your company",
         });
       }
 
@@ -211,23 +284,124 @@ module.exports = {
       }
 
       if (serviceExist.status !== "REQUESTED") {
-        return res.status(400).json({
-          status: false,
-          message: "Invalid Pilotage Service status.",
-        });
+        return res
+          .status(400)
+          .json({ status: false, message: "Invalid Pilotage Service status." });
       }
 
-      const approvedService = await prisma.pilotageService.update({
-        where: { id: serviceExist.id },
-        data: {
-          status: "APPROVED",
-        },
+      // Transaction callback → bisa conditionally run query Prisma
+      const result = await prisma.$transaction(async (tx) => {
+        // Step 1: approve pilotageService
+        const approved = await tx.pilotageService.update({
+          where: { id: serviceExist.id },
+          data: {
+            status: "APPROVED",
+            createdBy: user.id,
+          },
+          include: { tugServices: true }, // kita butuh id tugService kalau ada
+        });
+
+        // Step 2: kalau ada tugService, approve juga (1:1 by bisnis rule)
+        if (approved.tugServices.length > 0) {
+          await tx.tugService.update({
+            where: { id: approved.tugServices[0].id }, // update tunggal
+            data: { status: "APPROVED" },
+          });
+        }
+
+        // Optional: re-fetch biar relasi yang dikembalikan sudah up-to-date
+        const withRelations = await tx.pilotageService.findUnique({
+          where: { id: approved.id },
+          include: { tugServices: true },
+        });
+
+        return withRelations;
       });
 
       return res.status(200).json({
         status: true,
         message: "Pilotage Service Approved!",
-        data: approvedService,
+        data: result,
+      });
+    } catch (error) {
+      console.error("Error approving service:", error);
+      return res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
+  },
+  reject: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = req.user;
+
+      // Ambil service + relasi tugServices untuk validasi awal
+      const serviceExist = await prisma.pilotageService.findUnique({
+        where: { id: Number(id) },
+        include: { tugServices: true },
+      });
+
+      if (!serviceExist) {
+        return res
+          .status(404)
+          .json({ status: false, message: "Pilotage Service not found." });
+      }
+
+      if (user.companyId !== serviceExist.companyId) {
+        return res.status(403).json({
+          status: false,
+          message: "Forbidden access user, please check your company",
+        });
+      }
+
+      if (serviceExist.status === "REJECTED") {
+        return res.status(409).json({
+          status: false,
+          message: "Pilotage Service already rejected.",
+        });
+      }
+
+      if (serviceExist.status !== "REQUESTED") {
+        return res
+          .status(400)
+          .json({ status: false, message: "Invalid Pilotage Service status." });
+      }
+
+      // Transaction callback → bisa conditionally run query Prisma
+      const result = await prisma.$transaction(async (tx) => {
+        // Step 1: approve pilotageService
+        const approved = await tx.pilotageService.update({
+          where: { id: serviceExist.id },
+          data: {
+            status: "REJECTED",
+            createdBy: user.id,
+          },
+          include: { tugServices: true }, // kita butuh id tugService kalau ada
+        });
+
+        // Step 2: kalau ada tugService, approve juga (1:1 by bisnis rule)
+        if (approved.tugServices.length > 0) {
+          await tx.tugService.update({
+            where: { id: approved.tugServices[0].id }, // update tunggal
+            data: { status: "REJECTED" },
+          });
+        }
+
+        // Optional: re-fetch biar relasi yang dikembalikan sudah up-to-date
+        const withRelations = await tx.pilotageService.findUnique({
+          where: { id: approved.id },
+          include: { tugServices: true },
+        });
+
+        return withRelations;
+      });
+
+      return res.status(200).json({
+        status: true,
+        message: "Pilotage Service Rejected!",
+        data: result,
       });
     } catch (error) {
       console.error("Error approving service:", error);
