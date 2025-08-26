@@ -38,4 +38,21 @@ module.exports = {
         .json({ status: false, message: "Internal server error" });
     }
   },
+  detail: async (req, res) => {
+    try {
+      const user = req.user;
+      const { id } = req.params;
+
+      const service = await prisma.tugService.findUnique({
+        where: { id: Number(id) },
+        include: {
+          tugDetails: true,
+        },
+      });
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ status: false, message: "Internal server error" });
+    }
+  },
 };
