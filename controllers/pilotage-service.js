@@ -412,4 +412,160 @@ module.exports = {
       });
     }
   },
+  onBoard: async (req, res) => {
+    try {
+      const user = req.user;
+      const { id } = req.params;
+      const { startDate, startTime } = req.body;
+      const service = await prisma.pilotageService.findUnique({
+        where: { id: Number(id) },
+      });
+
+      if (!service) {
+        return res.status(404).json({
+          status: false,
+          message: "Service not found",
+        });
+      }
+      if (user.companyId !== service.companyId) {
+        return res.status(401).json({
+          status: false,
+          message: "Forbidden user access. check your company",
+        });
+      }
+      if (service.status !== "APPROVED") {
+        return res.status(400).json({
+          status: true,
+          message: "Invalid Service Status",
+        });
+      }
+
+      const updatedService = await prisma.pilotageService.findUnique({
+        where: { id: Number(id) },
+        data: {
+          pilotId: Number(user.id),
+          status: "IN_PROCESS",
+          startDate: new Date(),
+          startTime: new Date(),
+        },
+      });
+      return res.status(200).json({
+        status: true,
+        message: "Success update onBoard",
+        data: updatedService,
+      });
+    } catch (error) {
+      console.error("Error starting pilotage service:", error);
+      return res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
+  },
+  offBoard: async (req, res) => {
+    try {
+      const user = req.user;
+      const { id } = req.params;
+      const { endDate, endTime, note, rate } = req.body;
+      const service = await prisma.pilotageService.findUnique({
+        where: { id: Number(id) },
+      });
+
+      if (!service) {
+        return res.status(404).json({
+          status: false,
+          message: "Service not found",
+        });
+      }
+      if (user.id !== service.pilotId) {
+        return res.status(401).json({
+          status: false,
+          message: "Invalid Pilot data, please check pilot on board",
+        });
+      }
+      if (user.companyId !== service.companyId) {
+        return res.status(401).json({
+          status: false,
+          message: "Forbidden user access. check your company",
+        });
+      }
+      if (service.status !== "IN_PROCESS") {
+        return res.status(400).json({
+          status: true,
+          message: "Invalid Service Status",
+        });
+      }
+
+      const updatedService = await prisma.pilotageService.findUnique({
+        where: { id: Number(id) },
+        data: {
+          pilotId: Number(user.id),
+          status: "COMPLETED",
+          endDate: new Date(),
+          endTime: new Date(),
+          note: note,
+          rate: rate,
+        },
+      });
+      return res.status(200).json({
+        status: true,
+        message: "Success completing pilotage service",
+        data: updatedService,
+      });
+    } catch (error) {
+      console.error("Error completing pilotage service:", error);
+      return res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
+  },
+  submit: async (req, res) => {
+    try {
+      const user = req.user;
+      const id = req.params;
+      const { docNumber } = req.body;
+
+      const service = await prisma.pilotageService.findUnique({
+        where: { id: Number(id) },
+      });
+
+      if (!service) {
+        return res.status(404).json({
+          status: false,
+          message: "Service not found",
+        });
+      }
+      if (user.companyId !== service.companyId) {
+        return res.status(401).json({
+          status: false,
+          message: "Forbidden access user, please check your company",
+        });
+      }
+
+      const updatedService = await prisma.pilotageService.findUnique({
+        where: { id: Number(id) },
+        data: {
+          status: "SUBMITTED",
+          submitedBy: Number(user.id),
+          submitTime: new Date(),
+        },
+      });
+
+      return res.status(200).json({
+        status: true,
+        message: "Success submit pilotage service",
+        data: updatedService,
+      });
+    } catch (error) {
+      console.error("Error submiting pilotage service:", error);
+      return res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
+  },
 };

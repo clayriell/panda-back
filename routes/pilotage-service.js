@@ -6,6 +6,9 @@ const {
   approve,
   reject,
   detail,
+  onBoard,
+  offBoard,
+  submit,
 } = require("../controllers/pilotage-service");
 
 const { authenticate } = require("../middleware/auth");
@@ -24,5 +27,8 @@ router.get("/:id/detail", authenticate, detail);
 router.post("/request", authenticate, request);
 router.put("/:id/approve", authenticate, mustRole("ADMIN"), approve);
 router.put("/:id/reject", authenticate, mustRole("ADMIN"), reject);
+router.put("/:id/onBoard", authenticate, mustRole("PILOT"), onBoard);
+router.put("/:id/offBoard", authenticate, mustRole("PILOT"), offBoard);
+router.put("/:id/submit", authenticate, mustRole("PILOT"), submit);
 
 module.exports = router;
