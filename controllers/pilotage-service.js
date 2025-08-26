@@ -269,7 +269,6 @@ module.exports = {
       }
 
       if (user.companyId !== serviceExist.companyId) {
-        // 403 lebih tepat untuk forbidden
         return res.status(403).json({
           status: false,
           message: "Forbidden access user, please check your company",
@@ -416,7 +415,6 @@ module.exports = {
     try {
       const user = req.user;
       const { id } = req.params;
-      const { startDate, startTime } = req.body;
       const service = await prisma.pilotageService.findUnique({
         where: { id: Number(id) },
       });
@@ -428,7 +426,7 @@ module.exports = {
         });
       }
       if (user.companyId !== service.companyId) {
-        return res.status(401).json({
+        return res.status(403).json({
           status: false,
           message: "Forbidden user access. check your company",
         });
@@ -440,7 +438,7 @@ module.exports = {
         });
       }
 
-      const updatedService = await prisma.pilotageService.findUnique({
+      const updatedService = await prisma.pilotageService.update({
         where: { id: Number(id) },
         data: {
           pilotId: Number(user.id),
@@ -467,7 +465,7 @@ module.exports = {
     try {
       const user = req.user;
       const { id } = req.params;
-      const { endDate, endTime, note, rate } = req.body;
+      const { note, rate } = req.body;
       const service = await prisma.pilotageService.findUnique({
         where: { id: Number(id) },
       });
@@ -485,7 +483,7 @@ module.exports = {
         });
       }
       if (user.companyId !== service.companyId) {
-        return res.status(401).json({
+        return res.status(403).json({
           status: false,
           message: "Forbidden user access. check your company",
         });
@@ -497,7 +495,7 @@ module.exports = {
         });
       }
 
-      const updatedService = await prisma.pilotageService.findUnique({
+      const updatedService = await prisma.pilotageService.update({
         where: { id: Number(id) },
         data: {
           pilotId: Number(user.id),
@@ -525,7 +523,7 @@ module.exports = {
   submit: async (req, res) => {
     try {
       const user = req.user;
-      const id = req.params;
+      const { id } = req.params;
       const { docNumber } = req.body;
 
       const service = await prisma.pilotageService.findUnique({
@@ -545,11 +543,11 @@ module.exports = {
         });
       }
 
-      const updatedService = await prisma.pilotageService.findUnique({
+      const updatedService = await prisma.pilotageService.update({
         where: { id: Number(id) },
         data: {
           status: "SUBMITTED",
-          submitedBy: Number(user.id),
+          submittedBy: Number(user.id),
           submitTime: new Date(),
         },
       });

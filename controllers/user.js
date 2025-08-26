@@ -56,14 +56,14 @@ module.exports = {
 
   getAll: async (req, res) => {
     try {
-      const user = await prisma.user.findMany();
+      const user = await prisma.user.findMany({ orderBy: { id: "desc" } });
 
       return res.status(200).json({
         message: "Success get all user data",
         data: user,
       });
     } catch (error) {
-      console.error(err);
+      console.error(error);
       res.status(500).json({ message: "Server error" });
     }
   },
