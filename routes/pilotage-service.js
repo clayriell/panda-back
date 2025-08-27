@@ -9,6 +9,7 @@ const {
   onBoard,
   offBoard,
   submit,
+  getByCompany,
 } = require("../controllers/pilotage-service");
 
 const { authenticate } = require("../middleware/auth");
@@ -23,6 +24,7 @@ router.get(
   mustRole("ADMIN", "SYS_ADMIN"),
   getRequestedServices
 );
+router.get("/company", authenticate, getByCompany);
 router.get("/:id/detail", authenticate, detail);
 router.post("/request", authenticate, request);
 router.put("/:id/approve", authenticate, mustRole("ADMIN"), approve);

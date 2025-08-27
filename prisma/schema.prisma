@@ -10,9 +10,9 @@ datasource db {
 model Agency {
   id        Int @id @default(autoincrement())
   name      String
-  address   String
-  picName   String
-  picNumber String
+  address   String?
+  picName   String?
+  picNumber String?
   email     String
   
   pilotageService PilotageService[]

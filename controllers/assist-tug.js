@@ -1,4 +1,5 @@
 const prisma = require("../config/db");
+const { getByCompany } = require("./tug-service");
 
 module.exports = {
   getAll: async (req, res) => {
@@ -32,6 +33,34 @@ module.exports = {
         status: true,
         message: "Success get assist tug list",
         data: assistTugs,
+      });
+    } catch (error) {
+      return res
+        .status(501)
+        .json({ status: false, message: "Internal server error" });
+    }
+  },
+  getByCompany: async (req, res) => {
+    try {
+      const user = req.user;
+
+      const assistTugServices = await prisma.assistTug.findMany({
+        where: {
+          companyId: user.companyId,
+        },
+        include: {
+          tugDetails: {
+            select: {
+              tugService: true,
+            },
+          },
+        },
+      });
+
+      return res.status(200).json({
+        status: true,
+        message: "Success get all assist tug's services",
+        data: assistTugServices,
       });
     } catch (error) {
       return res

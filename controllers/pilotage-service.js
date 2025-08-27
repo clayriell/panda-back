@@ -1,5 +1,6 @@
 const { pilotageservice_status } = require("@prisma/client");
 const prisma = require("../config/db");
+const { getByCompany } = require("./tug-service");
 
 module.exports = {
   getAll: async (req, res, next) => {
@@ -559,6 +560,29 @@ module.exports = {
       });
     } catch (error) {
       console.error("Error submiting pilotage service:", error);
+      return res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
+  },
+  getByCompany: async (req, res) => {
+    try {
+      const user = req.user;
+
+      const service = await prisma.pilotageService.findMany({
+        where: {
+          companyId: user.companyId,
+        },
+      });
+
+      return res.status(200).json({
+        status: true,
+        message: "Success get all",
+        data: service,
+      });
+    } catch (error) {
       return res.status(500).json({
         status: false,
         message: "Internal server error",

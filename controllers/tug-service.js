@@ -46,10 +46,56 @@ module.exports = {
       const service = await prisma.tugService.findUnique({
         where: { id: Number(id) },
         include: {
+          pilotageService: true,
           tugDetails: true,
         },
       });
+
+      if (!service) {
+        return res.status(404).json({
+          status: false,
+          message: "Tug service not found.",
+        });
+      }
+      if (user.companyId !== service.pilotageService.companyId) {
+        return res.status(403).json({
+          status: false,
+          message: "Forbidden user access, check your company",
+        });
+      }
+      return res.status(200).json({
+        status: true,
+        message: "Success get tug service detail",
+        data: service,
+      });
     } catch (error) {
+      return res
+        .status(500)
+        .json({ status: false, message: "Internal server error" });
+    }
+  },
+  getByCompany: async (req, res) => {
+    try {
+      const user = req.user;
+
+      const tugServices = await prisma.tugService.findMany({
+        where: {
+          pilotageService: {
+            companyId: user.companyId,
+          },
+        },
+        include: {
+          pilotageService: true, 
+        },
+      });
+
+      return res.status(200).json({
+        status: true,
+        message: "Success get tug services",
+        data: tugServices,
+      });
+    } catch (error) {
+      console.error(error);
       return res
         .status(500)
         .json({ status: false, message: "Internal server error" });
