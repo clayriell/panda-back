@@ -62,19 +62,45 @@ module.exports = {
         terminalEndId,
         lastPort,
         nextPort,
+        startDate,
         startTime,
         companyId,
         shipDetails,
         tugServices,
       } = req.body;
 
-      if (!startTime) {
-        return res.status(400).json({
-          status: false,
-          message: "startTime is required",
-        });
+      const dateTime = new Date(`${startDate}T${startTime}:00Z`);
+
+      if (idJasa !== null) {
+        let serviceExist = null;
+        if (idJasa) {
+          serviceExist = await prisma.pilotageService.findFirst({
+            where: { idJasa: Number(idJasa) },
+          });
+        }
+
+        if (serviceExist) {
+          return res.status(400).json({
+            status: false,
+            message: "Permohonan atas ID Jasa tersebut sudah dibuat!",
+          });
+        }
       }
 
+      if (Array.isArray(tugServices)) {
+        for (const tug of tugServices) {
+          const tugServiceExist = await prisma.tugService.findFirst({
+            where: { idJasa: Number(tug.idJasa) },
+          });
+
+          if (tugServiceExist) {
+            return res.status(400).json({
+              status: false,
+              message: `TugService dengan ID Jasa ${tug.idJasa} sudah ada!`,
+            });
+          }
+        }
+      }
       if (!Array.isArray(shipDetails) || shipDetails.length === 0) {
         return res.status(400).json({
           status: false,
@@ -104,8 +130,8 @@ module.exports = {
             terminalEndId: Number(terminalEndId),
             lastPort,
             nextPort,
-            startDate: startTime,
-            startTime: startTime,
+            startDate: dateTime,
+            startTime: dateTime,
             companyId: Number(companyId),
             amount: 0,
             status: "REQUESTED",
@@ -130,15 +156,15 @@ module.exports = {
                 idJasa: tug.idJasa,
                 amount: 0,
                 status: "REQUESTED",
-                  
+
                 tugDetails: {
                   create: tug.tugDetails.map((det) => ({
                     assistTugId: det.assistTugId,
-                    activity ,
+                    activity: det.activity,
                     connectTime: null,
                     disconnectTime: null,
-                    mobTime : null,
-                    demobTime : null,
+                    mobTime: null,
+                    demobTime: null,
                   })),
                 },
               },

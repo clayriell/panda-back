@@ -51,7 +51,7 @@ model PilotageService {
   nextPort       String?
   pilotId        Int?
   startDate      DateTime @db.Date @default(dbgenerated("CURRENT_DATE"))
-  startTime      DateTime @db.Time @default(dbgenerated("CURRENT_TIME"))
+  startTime      DateTime @db.Time  @default(dbgenerated("CURRENT_TIME"))
   endDate        DateTime? @db.Date
   endTime        DateTime? @db.Time
   note           String?
