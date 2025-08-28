@@ -1,6 +1,4 @@
-const { pilotageservice_status } = require("@prisma/client");
 const prisma = require("../config/db");
-const { getByCompany } = require("./tug-service");
 
 module.exports = {
   getAll: async (req, res, next) => {
@@ -132,11 +130,15 @@ module.exports = {
                 idJasa: tug.idJasa,
                 amount: 0,
                 status: "REQUESTED",
+                  
                 tugDetails: {
                   create: tug.tugDetails.map((det) => ({
                     assistTugId: det.assistTugId,
+                    activity ,
                     connectTime: null,
                     disconnectTime: null,
+                    mobTime : null,
+                    demobTime : null,
                   })),
                 },
               },

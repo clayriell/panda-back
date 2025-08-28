@@ -48,18 +48,11 @@ module.exports = {
         where: {
           companyId: user.companyId,
         },
-        include: {
-          tugDetails: {
-            select: {
-              tugService: true,
-            },
-          },
-        },
       });
 
       return res.status(200).json({
         status: true,
-        message: "Success get all assist tug's services",
+        message: "Success get all company assist tug",
         data: assistTugServices,
       });
     } catch (error) {

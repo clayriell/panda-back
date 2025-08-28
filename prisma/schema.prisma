@@ -111,6 +111,9 @@ model TugServiceDetail {
   assistTug   AssistTug  @relation(fields: [assistTugId], references: [id])
   connectTime DateTime?
   disconnectTime DateTime?
+  mobTime DateTime?
+  demobTime DateTime?
+  activity          AssistActivity @default(ASSIST_BERTHING)
 }
 
 model User {
@@ -153,10 +156,18 @@ enum Role {
   SYS_ADMIN
   ADMIN
   PILOT
+  TUG_MASTER
 }
 enum Activity {
   BERTHING
   UNBERTHING
   SEA_TRIAL
   SHIFTING
+}
+
+enum AssistActivity {
+  ASSIST_BERTHING
+  ASSIST_UNBERTHING
+  SEA_TRIAL
+  ASSIST_SHIFTING
 }

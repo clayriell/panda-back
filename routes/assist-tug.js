@@ -6,6 +6,6 @@ const router = express.Router();
 
 router.get("/", authenticate, mustRole("ADMIN", "SYS_ADMIN"), getAll);
 router.get("/list", getList);
-router.get("/services", authenticate, getByCompany);
+router.get("/company", authenticate, getByCompany);
 
 module.exports = router;
