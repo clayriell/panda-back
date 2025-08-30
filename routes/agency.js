@@ -11,7 +11,7 @@ const { mustRole } = require("../middleware/role");
 
 const router = express.Router();
 
-router.get("/", authenticate, mustRole("ADMIN", "SYS_ADMIN"), getAll);
+router.get("/", authenticate, mustRole("SYS_ADMIN"), getAll);
 router.get("/list", getList);
 router.get("/:id/detail", authenticate, mustRole("SYS_ADMIN"), detail);
 router.post("/", authenticate, mustRole("SYS_ADMIN"), create);

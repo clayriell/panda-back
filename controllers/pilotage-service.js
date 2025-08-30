@@ -595,16 +595,54 @@ module.exports = {
       });
     }
   },
-  getByCompany: async (req, res) => {
+  getService: async (req, res) => {
+    try {
+      const user = req.user;
+      const service = await prisma.pilotageService.findMany({
+        where: {
+          companyId: Number(user.companyId),
+          status: { notIn: ["REQUESTED", "CANCELED", "REJECTED"] },
+        },
+        include: {
+          agency: true,
+          terminalStart: true,
+          terminalEnd: true,
+          shipDetails: true,
+          tugServices: {
+            include: { tugDetails: { include: { assistTug: true } } },
+          },
+        },
+      });
+
+      return res.status(200).json({
+        status: true,
+        message: "Success get all",
+        data: service,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
+  },
+  getRequestedServicebByCompany: async (req, res) => {
     try {
       const user = req.user;
 
       const service = await prisma.pilotageService.findMany({
         where: {
           companyId: user.companyId,
+          status: "REQUESTED",
+        },
+        include: {
+          agency: true,
+          shipDetails: true,
+          terminalStart: true,
+          terminalEnd: true,
         },
       });
-
       return res.status(200).json({
         status: true,
         message: "Success get all",

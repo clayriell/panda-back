@@ -56,7 +56,10 @@ module.exports = {
 
   getAll: async (req, res) => {
     try {
-      const user = await prisma.user.findMany({ orderBy: { id: "desc" } });
+      const user = await prisma.user.findMany({
+        orderBy: { id: "desc" },
+        include: { company: { select: { name: true } } },
+      });
 
       return res.status(200).json({
         message: "Success get all user data",

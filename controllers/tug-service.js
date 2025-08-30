@@ -1,4 +1,5 @@
 const prisma = require("../config/db");
+const { getService } = require("./pilotage-service");
 
 module.exports = {
   getAll: async (req, res) => {
@@ -8,6 +9,7 @@ module.exports = {
           pilotageService: {
             select: {
               activity: true,
+              shipDetails: true,
               agency: { select: { name: true } },
               terminalStart: { select: { name: true } },
               terminalEnd: { select: { name: true } },
@@ -85,7 +87,7 @@ module.exports = {
           },
         },
         include: {
-          pilotageService: true, 
+          pilotageService: true,
         },
       });
 
@@ -96,6 +98,53 @@ module.exports = {
       });
     } catch (error) {
       console.error(error);
+      return res
+        .status(500)
+        .json({ status: false, message: "Internal server error" });
+    }
+  },
+  getService: async (req, res) => {
+    try {
+      const user = req.user;
+
+      const tugServices = await prisma.tugService.findMany({
+        where: {
+          pilotageService: {
+            companyId: Number(user.companyId),
+          },
+          status: { notIn: ["REJECTED", "REQUESTED", "CANCELED"] },
+        },
+        include: {
+          pilotageService: {
+            select: {
+              activity: true,
+              shipDetails: true,
+              agency: { select: { name: true } },
+              terminalStart: { select: { name: true } },
+              terminalEnd: { select: { name: true } },
+              lastPort: true,
+              nextPort: true,
+              startDate: true,
+              startTime: true,
+            },
+          },
+          tugDetails: {
+            select: {
+              assistTug: { select: { shipName: true } },
+              connectTime: true,
+              disconnectTime: true,
+            },
+          },
+        },
+      });
+
+      return res.status(200).json({
+        status: true,
+        message: "Success get all tug service",
+        data: tugServices,
+      });
+    } catch (error) {
+      console.error("Error getService:", error);
       return res
         .status(500)
         .json({ status: false, message: "Internal server error" });
