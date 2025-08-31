@@ -4,6 +4,9 @@ module.exports = {
   getAll: async (req, res, next) => {
     try {
       const pilotageService = await prisma.pilotageService.findMany({
+        where : {status : {
+          notIn : ["REQUESTED"]
+        }},
         include: {
           agency: true,
           terminalStart: true,
@@ -152,8 +155,8 @@ module.exports = {
           for (const tug of tugServices) {
             await tx.tugService.create({
               data: {
-                pilotageServiceId: newService.id,
-                idJasa: tug.idJasa,
+                pilotageServiceId: Number(newService.id),
+                idJasa: Number(tug.idJasa),
                 amount: 0,
                 status: "REQUESTED",
 

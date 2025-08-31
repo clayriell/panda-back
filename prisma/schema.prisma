@@ -13,7 +13,7 @@ model Agency {
   address   String?
   picName   String?
   picNumber String?
-  email     String
+  email     String?
   
   pilotageService PilotageService[]
   }
