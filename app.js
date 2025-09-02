@@ -1,3 +1,4 @@
+require('dotenv').config()
 const express = require("express");
 const routes = require("./routes");
 const morgan = require("morgan");
@@ -9,12 +10,24 @@ const app = express();
 app.use(express.json());
 app.use(morgan("dev"));
 
-app.use(
-  cors({
-    origin: "http://192.168.1.192:5173",
-    credentials: true,
-  })
-);
+// // single origin
+// app.use(cors({
+//   origin: process.env.CORS_ORIGIN
+// }))
+
+// kalau multi origin
+
+const allowedOrigins = process.env.CORS_ORIGINS.split(',')
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error('Not allowed by CORS'))
+    }
+  }
+}))
+
 
 // Routes
 app.use("/api", routes);

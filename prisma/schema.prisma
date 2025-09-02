@@ -21,11 +21,11 @@ model Agency {
 model AssistTug {
   id        Int       @id @default(autoincrement())
   shipName  String
-  master    String
+  masterId  Int?      @unique
   horsePower Int
   companyId Int?
   company   Company?  @relation(fields: [companyId], references: [id])
-
+  tugMaster  User?  @relation(fields: [masterId], references: [id])
   tugDetails TugServiceDetail[]
 }
 
@@ -78,7 +78,7 @@ model ShipDetail {
   shipName          String
   master            String
   grt               Int?
-  loa               Int?
+  loa               Decimal? @db.Decimal(6, 2) 
   flag              String?
 }
 
@@ -127,7 +127,7 @@ model User {
   companyId Int?
   isActive  Boolean          @default(false)
   company   Company?         @relation(fields: [companyId], references: [id])
-  
+  assistTug AssistTug?
   // relation ke pilotageService (submitter & creator)
   submittedServices PilotageService[] @relation("submittedBy")
   createdServices   PilotageService[] @relation("createdBy")

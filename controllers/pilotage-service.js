@@ -5,7 +5,6 @@ module.exports = {
     try {
       const pilotageService = await prisma.pilotageService.findMany({
         where : {status : {
-          notIn : ["REQUESTED"]
         }},
         include: {
           agency: true,
@@ -55,43 +54,47 @@ module.exports = {
       next(error); // diteruskan ke middleware error global
     }
   },
+
   request: async (req, res, next) => {
-    try {
-      const {
-        idJasa,
-        agencyId,
-        activity,
-        terminalStartId,
-        terminalEndId,
-        lastPort,
-        nextPort,
-        startDate,
-        startTime,
-        companyId,
-        shipDetails,
-        tugServices,
-      } = req.body;
+  try {
+    const {
+      idJasa,
+      agencyId,
+      activity,
+      terminalStartId,
+      terminalEndId,
+      lastPort,
+      nextPort,
+      startDate,
+      startTime,
+      companyId,
+      shipDetails,
+      tugServices,
+    } = req.body;
 
-      const dateTime = new Date(`${startDate}T${startTime}:00Z`);
+    const dateTime = new Date(`${startDate}T${startTime}:00Z`);
 
-      if (idJasa !== null) {
-        let serviceExist = null;
-        if (idJasa) {
-          serviceExist = await prisma.pilotageService.findFirst({
-            where: { idJasa: Number(idJasa) },
-          });
-        }
-
-        if (serviceExist) {
-          return res.status(400).json({
-            status: false,
-            message: "Permohonan atas ID Jasa tersebut sudah dibuat!",
-          });
-        }
+    // 🔹 Cek duplikat pilotageService
+    if (idJasa !== null) {
+      let serviceExist = null;
+      if (idJasa) {
+        serviceExist = await prisma.pilotageService.findFirst({
+          where: { idJasa: Number(idJasa) },
+        });
       }
 
-      if (Array.isArray(tugServices)) {
-        for (const tug of tugServices) {
+      if (serviceExist) {
+        return res.status(400).json({
+          status: false,
+          message: "Permohonan atas ID Jasa tersebut sudah dibuat!",
+        });
+      }
+    }
+
+    // 🔹 Cek duplikat tugService
+    if (Array.isArray(tugServices)) {
+      for (const tug of tugServices) {
+        if (tug?.idJasa) {
           const tugServiceExist = await prisma.tugService.findFirst({
             where: { idJasa: Number(tug.idJasa) },
           });
@@ -104,123 +107,120 @@ module.exports = {
           }
         }
       }
-      if (!Array.isArray(shipDetails) || shipDetails.length === 0) {
-        return res.status(400).json({
-          status: false,
-          message: "At least one ship detail is required",
-        });
-      }
+    }
 
-      if (Array.isArray(tugServices)) {
-        for (const tug of tugServices) {
-          if (!Array.isArray(tug.tugDetails) || tug.tugDetails.length === 0) {
-            return res.status(400).json({
-              status: false,
-              message:
-                "Each tugService must have at least one tugServiceDetail",
-            });
-          }
-        }
-      }
+    // 🔹 Validasi shipDetails wajib ada
+    if (!Array.isArray(shipDetails) || shipDetails.length === 0) {
+      return res.status(400).json({
+        status: false,
+        message: "At least one ship detail is required",
+      });
+    }
 
-      const result = await prisma.$transaction(async (tx) => {
-        const newService = await tx.pilotageService.create({
+    // 🔹 Filter tugServices valid (punya tugDetails)
+    const validTugServices = (Array.isArray(tugServices) ? tugServices : [])
+      .filter(
+        (tug) => Array.isArray(tug.tugDetails) && tug.tugDetails.length > 0
+      );
+
+    // 🔹 Transaction
+    const result = await prisma.$transaction(async (tx) => {
+      const newService = await tx.pilotageService.create({
+        data: {
+          idJasa: idJasa ? Number(idJasa) : null,
+          agencyId: Number(agencyId),
+          activity,
+          terminalStartId: Number(terminalStartId),
+          terminalEndId: Number(terminalEndId),
+          lastPort,
+          nextPort,
+          startDate: dateTime,
+          startTime: dateTime,
+          companyId: Number(companyId),
+          amount: 0,
+          status: "REQUESTED",
+          shipDetails: {
+            create: shipDetails.map((detail) => ({
+              shipName: detail.shipName,
+              master: detail.master,
+              grt: detail.grt,
+              loa: detail.loa,
+              flag: detail.flag,
+            })),
+          },
+        },
+        include: { shipDetails: true },
+      });
+
+      // 🔹 Insert tugServices hanya kalau valid
+      for (const tug of validTugServices) {
+        await tx.tugService.create({
           data: {
-            idJasa: Number(idJasa),
-            agencyId: Number(agencyId),
-            activity,
-            terminalStartId: Number(terminalStartId),
-            terminalEndId: Number(terminalEndId),
-            lastPort,
-            nextPort,
-            startDate: dateTime,
-            startTime: dateTime,
-            companyId: Number(companyId),
+            pilotageServiceId: Number(newService.id),
+            idJasa: tug.idJasa ? Number(tug.idJasa) : null,
             amount: 0,
             status: "REQUESTED",
-            shipDetails: {
-              create: shipDetails.map((detail) => ({
-                shipName: detail.shipName,
-                master: detail.master,
-                grt: detail.grt,
-                loa: detail.loa,
-                flag: detail.flag,
+            tugDetails: {
+              create: tug.tugDetails.map((det) => ({
+                assistTugId: Number(det.assistTugId),
+                activity: det.activity || "ASSIST_BERTHING",
+                connectTime: det.connectTime || null,
+                disconnectTime: det.disconnectTime || null,
+                mobTime: det.mobTime || null,
+                demobTime: det.demobTime || null,
               })),
             },
           },
-          include: { shipDetails: true },
         });
+      }
 
-        if (Array.isArray(tugServices) && tugServices.length > 0) {
-          for (const tug of tugServices) {
-            await tx.tugService.create({
-              data: {
-                pilotageServiceId: Number(newService.id),
-                idJasa: Number(tug.idJasa),
-                amount: 0,
-                status: "REQUESTED",
-
-                tugDetails: {
-                  create: tug.tugDetails.map((det) => ({
-                    assistTugId: det.assistTugId,
-                    activity: det.activity,
-                    connectTime: null,
-                    disconnectTime: null,
-                    mobTime: null,
-                    demobTime: null,
-                  })),
-                },
-              },
-            });
-          }
-        }
-
-        return tx.pilotageService.findUnique({
-          where: { id: newService.id },
-          include: {
-            shipDetails: true,
-            tugServices: { include: { tugDetails: true } },
-          },
-        });
+      return tx.pilotageService.findUnique({
+        where: { id: newService.id },
+        include: {
+          shipDetails: true,
+          tugServices: { include: { tugDetails: true } },
+        },
       });
+    });
 
-      return res.status(201).json({
-        status: true,
-        message: "New Service created successfully",
-        data: result,
-      });
-    } catch (error) {
-      console.error("Error creating PilotageService:", error);
+    return res.status(201).json({
+      status: true,
+      message: "New Service created successfully",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error creating PilotageService:", error);
 
-      if (error.code === "P2003") {
-        return res.status(400).json({
-          status: false,
-          message:
-            "Invalid reference (agencyId, terminalId, or companyId not found)",
-        });
-      }
-
-      if (error.code === "P2002") {
-        return res.status(400).json({
-          status: false,
-          message: "Duplicate entry",
-        });
-      }
-
-      // custom error fallback
-      if (error.message?.includes("tugService")) {
-        return res.status(400).json({
-          status: false,
-          message: error.message,
-        });
-      }
-
-      return res.status(500).json({
+    if (error.code === "P2003") {
+      return res.status(400).json({
         status: false,
-        message: "Internal server error",
+        message:
+          "Invalid reference (agencyId, terminalId, or companyId not found)",
       });
     }
-  },
+
+    if (error.code === "P2002") {
+      return res.status(400).json({
+        status: false,
+        message: "Duplicate entry",
+      });
+    }
+
+    if (error.message?.includes("tugService")) {
+      return res.status(400).json({
+        status: false,
+        message: error.message,
+      });
+    }
+
+    return res.status(500).json({
+      status: false,
+      message: "Internal server error",
+    });
+  }
+},
+
+
 
   detail: async (req, res) => {
     try {
@@ -230,6 +230,7 @@ module.exports = {
       const service = await prisma.pilotageService.findUnique({
         where: { id: Number(id) },
         include: {
+          shipDetails : true, 
           agency: {
             select: {
               name: true,

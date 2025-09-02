@@ -17,10 +17,9 @@ const { authenticate } = require("../middleware/auth");
 const { mustRole } = require("../middleware/role");
 const router = express.Router();
 
-// GET /api/service/requested
-router.get("/sys-all", getAll);
-router.get("/all",authenticate, getService);
+router.get("/sys-all", authenticate, mustRole("SYS_ADMIN"), getAll); // get all services by sys admin
 router.get("/sys-requested", authenticate, mustRole("SYS_ADMIN"), getRequestedServices);
+router.get("/all",authenticate, getService);
 router.get("/requested", authenticate, getRequestedServicebByCompany);
 router.get("/:id/detail", authenticate, detail);
 router.put("/:id/approve", authenticate, mustRole("ADMIN"), approve);
