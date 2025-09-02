@@ -154,6 +154,9 @@ module.exports = {
       return tx.pilotageService.findUnique({
         where: { id: newService.id },
         include: {
+          agency : true,
+          terminalStart : true,
+          terminalEnd : true,
           shipDetails: true,
           tugServices: { include: { tugDetails: true } },
         },
