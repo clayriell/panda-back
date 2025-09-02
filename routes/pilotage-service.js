@@ -2,7 +2,7 @@ const express = require("express");
 const {
   getAll,
   getRequestedServices,
-  request,
+  create,
   approve,
   reject,
   detail,
@@ -27,6 +27,6 @@ router.put("/:id/reject", authenticate, mustRole("ADMIN"), reject);
 router.put("/:id/onBoard", authenticate, mustRole("PILOT"), onBoard);
 router.put("/:id/offBoard", authenticate, mustRole("PILOT"), offBoard);
 router.put("/:id/submit", authenticate, mustRole("PILOT"), submit);
-router.post("/request", authenticate, request);
+router.post("/request", authenticate, create);
 
 module.exports = router;

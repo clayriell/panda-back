@@ -55,7 +55,7 @@ module.exports = {
     }
   },
 
-  request: async (req, res, next) => {
+  create: async (req, res, next) => {
   try {
     const {
       idJasa,
@@ -69,45 +69,11 @@ module.exports = {
       startTime,
       companyId,
       shipDetails,
-      tugServices,
+      tugServices,  // array, tapi seharusnya max 1 TugService di requirement
+      useAssist,
     } = req.body;
 
     const dateTime = new Date(`${startDate}T${startTime}:00Z`);
-
-    // 🔹 Cek duplikat pilotageService
-    if (idJasa !== null) {
-      let serviceExist = null;
-      if (idJasa) {
-        serviceExist = await prisma.pilotageService.findFirst({
-          where: { idJasa: Number(idJasa) },
-        });
-      }
-
-      if (serviceExist) {
-        return res.status(400).json({
-          status: false,
-          message: "Permohonan atas ID Jasa tersebut sudah dibuat!",
-        });
-      }
-    }
-
-    // 🔹 Cek duplikat tugService
-    if (Array.isArray(tugServices)) {
-      for (const tug of tugServices) {
-        if (tug?.idJasa) {
-          const tugServiceExist = await prisma.tugService.findFirst({
-            where: { idJasa: Number(tug.idJasa) },
-          });
-
-          if (tugServiceExist) {
-            return res.status(400).json({
-              status: false,
-              message: `TugService dengan ID Jasa ${tug.idJasa} sudah ada!`,
-            });
-          }
-        }
-      }
-    }
 
     // 🔹 Validasi shipDetails wajib ada
     if (!Array.isArray(shipDetails) || shipDetails.length === 0) {
@@ -117,14 +83,9 @@ module.exports = {
       });
     }
 
-    // 🔹 Filter tugServices valid (punya tugDetails)
-    const validTugServices = (Array.isArray(tugServices) ? tugServices : [])
-      .filter(
-        (tug) => Array.isArray(tug.tugDetails) && tug.tugDetails.length > 0
-      );
-
     // 🔹 Transaction
     const result = await prisma.$transaction(async (tx) => {
+      // 1️⃣ Buat PilotageService
       const newService = await tx.pilotageService.create({
         data: {
           idJasa: idJasa ? Number(idJasa) : null,
@@ -152,23 +113,39 @@ module.exports = {
         include: { shipDetails: true },
       });
 
-      // 🔹 Insert tugServices hanya kalau valid
-      for (const tug of validTugServices) {
+      // 2️⃣ Kalau pakai assist → wajib buat TugService + TugServiceDetail
+      if (useAssist) {
+        if (!Array.isArray(tugServices) || tugServices.length === 0) {
+          throw new Error("TugService wajib ada jika Assist Tug dipilih!");
+        }
+
+        // requirement: hanya 1 tugService per pilotageService
+        const tug = tugServices[0];
+
+        if (!Array.isArray(tug.tugDetails) || tug.tugDetails.length === 0) {
+          throw new Error("TugServiceDetail wajib ada jika Assist Tug dipilih!");
+        }
+
         await tx.tugService.create({
           data: {
-            pilotageServiceId: Number(newService.id),
+            pilotageServiceId: newService.id,
             idJasa: tug.idJasa ? Number(tug.idJasa) : null,
             amount: 0,
             status: "REQUESTED",
             tugDetails: {
-              create: tug.tugDetails.map((det) => ({
-                assistTugId: Number(det.assistTugId),
-                activity: det.activity || "ASSIST_BERTHING",
-                connectTime: det.connectTime || null,
-                disconnectTime: det.disconnectTime || null,
-                mobTime: det.mobTime || null,
-                demobTime: det.demobTime || null,
-              })),
+              create: tug.tugDetails.map((det) => {
+                if (!det.assistTugId) {
+                  throw new Error("assistTugId wajib ada di TugServiceDetail!");
+                }
+                return {
+                  assistTugId: Number(det.assistTugId),
+                  activity: det.activity || "ASSIST_BERTHING",
+                  connectTime: det.connectTime || null,
+                  disconnectTime: det.disconnectTime || null,
+                  mobTime: det.mobTime || null,
+                  demobTime: det.demobTime || null,
+                };
+              }),
             },
           },
         });
@@ -190,35 +167,13 @@ module.exports = {
     });
   } catch (error) {
     console.error("Error creating PilotageService:", error);
-
-    if (error.code === "P2003") {
-      return res.status(400).json({
-        status: false,
-        message:
-          "Invalid reference (agencyId, terminalId, or companyId not found)",
-      });
-    }
-
-    if (error.code === "P2002") {
-      return res.status(400).json({
-        status: false,
-        message: "Duplicate entry",
-      });
-    }
-
-    if (error.message?.includes("tugService")) {
-      return res.status(400).json({
-        status: false,
-        message: error.message,
-      });
-    }
-
-    return res.status(500).json({
+    return res.status(400).json({
       status: false,
-      message: "Internal server error",
+      message: error.message || "Failed to create PilotageService",
     });
   }
-},
+}
+,
 
 
 
