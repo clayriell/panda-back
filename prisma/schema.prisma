@@ -149,6 +149,7 @@ enum ServiceStatus {
   SUBMITTED
   REJECTED
   PAID
+  CHECK
   CANCELED
 }
 

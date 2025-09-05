@@ -62,13 +62,13 @@ module.exports = {
     try {
       const { name, address, email, picName, picNumber } = req.body;
 
-      const agencyExist = await prisma.agency.findFirst({
+      const agencyExsist = await prisma.agency.findFirst({
         where: {
           OR: [{ name }, { email }],
         },
       });
 
-      if (agencyExist) {
+      if (agencyExsist) {
         return res.status(400).json({
           status: false,
           message: "Name already taken or email already registered",
@@ -109,13 +109,13 @@ module.exports = {
           .status(404)
           .json({ status: false, message: "Agency not found" });
       }
-      const agencyExist = await prisma.agency.findFirst({
+      const agencyExsist = await prisma.agency.findFirst({
         where: {
           OR: [{ name }, { email }],
         },
       });
 
-      if (agencyExist) {
+      if (agencyExsist) {
         return res.status(400).json({
           status: false,
           message: "Name already taken or email already registered",

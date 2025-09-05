@@ -4,16 +4,16 @@ const bcrypt = require("bcrypt");
 module.exports = {
   register: async (req, res) => {
     try {
-      const { username, name, email, password, companyId } = req.body;
+      const { username, name, email, password, companyId , role} = req.body;
 
       // cek email atau username sudah ada
-      const existingUser = await prisma.user.findFirst({
+      const userExsist = await prisma.user.findFirst({
         where: {
           OR: [{ email }, { username }],
         },
       });
 
-      if (existingUser) {
+      if (userExsist) {
         return res
           .status(400)
           .json({ message: "Username atau email sudah digunakan" });
@@ -29,7 +29,7 @@ module.exports = {
           name,
           email,
           password: hashedPassword,
-          role: "ADMIN",
+          role,
           picture: "",
           companyId,
           isActive: false,
@@ -141,11 +141,11 @@ module.exports = {
   profile: async (req, res) => {
     const user = req.user;
     try {
-      const userExist = await prisma.user.findUnique({
+      const userExsist = await prisma.user.findUnique({
         where: { username: user.username },
       });
 
-      if (!userExist) {
+      if (!userExsist) {
         return res.status(401).json({
           status: false,
           message: "User not found",
@@ -154,7 +154,7 @@ module.exports = {
       return res.status(200).json({
         status: true,
         message: "Success get user data",
-        data: userExist,
+        data: userExsist,
       });
     } catch (error) {
       return res.status(500).json({ status: false, message: error });

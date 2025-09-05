@@ -248,32 +248,32 @@ module.exports = {
       const user = req.user;
 
       // Ambil service + relasi tugServices untuk validasi awal
-      const serviceExist = await prisma.pilotageService.findUnique({
+      const serviceExsist = await prisma.pilotageService.findUnique({
         where: { id: Number(id) },
         include: { tugServices: true },
       });
 
-      if (!serviceExist) {
+      if (!serviceExsist) {
         return res
           .status(404)
           .json({ status: false, message: "Pilotage Service not found." });
       }
 
-      if (user.companyId !== serviceExist.companyId) {
+      if (user.companyId !== serviceExsist.companyId) {
         return res.status(403).json({
           status: false,
           message: "Forbidden access user, please check your company",
         });
       }
 
-      if (serviceExist.status === "APPROVED") {
+      if (serviceExsist.status === "APPROVED") {
         return res.status(409).json({
           status: false,
           message: "Pilotage Service already approved.",
         });
       }
 
-      if (serviceExist.status !== "REQUESTED") {
+      if (serviceExsist.status !== "REQUESTED") {
         return res
           .status(400)
           .json({ status: false, message: "Invalid Pilotage Service status." });
@@ -283,7 +283,7 @@ module.exports = {
       const result = await prisma.$transaction(async (tx) => {
         // Step 1: approve pilotageService
         const approved = await tx.pilotageService.update({
-          where: { id: serviceExist.id },
+          where: { id: serviceExsist.id },
           data: {
             status: "APPROVED",
             createdBy: user.id,
@@ -328,32 +328,32 @@ module.exports = {
       const user = req.user;
 
       // Ambil service + relasi tugServices untuk validasi awal
-      const serviceExist = await prisma.pilotageService.findUnique({
+      const serviceExsist = await prisma.pilotageService.findUnique({
         where: { id: Number(id) },
         include: { tugServices: true },
       });
 
-      if (!serviceExist) {
+      if (!serviceExsist) {
         return res
           .status(404)
           .json({ status: false, message: "Pilotage Service not found." });
       }
 
-      if (user.companyId !== serviceExist.companyId) {
+      if (user.companyId !== serviceExsist.companyId) {
         return res.status(403).json({
           status: false,
           message: "Forbidden access user, please check your company",
         });
       }
 
-      if (serviceExist.status === "REJECTED") {
+      if (serviceExsist.status === "REJECTED") {
         return res.status(409).json({
           status: false,
           message: "Pilotage Service already rejected.",
         });
       }
 
-      if (serviceExist.status !== "REQUESTED") {
+      if (serviceExsist.status !== "REQUESTED") {
         return res
           .status(400)
           .json({ status: false, message: "Invalid Pilotage Service status." });
@@ -363,7 +363,7 @@ module.exports = {
       const result = await prisma.$transaction(async (tx) => {
         // Step 1: approve pilotageService
         const approved = await tx.pilotageService.update({
-          where: { id: serviceExist.id },
+          where: { id: serviceExsist.id },
           data: {
             status: "REJECTED",
             createdBy: user.id,

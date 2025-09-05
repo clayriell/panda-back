@@ -63,11 +63,11 @@ module.exports = {
 
       const terminalId = Number(id);
 
-      const terminalExist = await prisma.terminal.findUnique({
+      const terminalExsist = await prisma.terminal.findUnique({
         where: { id: terminalId },
       });
 
-      if (!terminalExist) {
+      if (!terminalExsist) {
         return res.status(404).json({
           status: false,
           message: "Terminal not found.",
@@ -100,11 +100,11 @@ module.exports = {
     try {
       const { code, name, area } = req.body;
 
-      const terminalExist = await prisma.terminal.findUnique({
+      const terminalExsist = await prisma.terminal.findUnique({
         where: { code: code },
       });
 
-      if (terminalExist) {
+      if (terminalExsist) {
         return res.status(400).json({
           status: false,
           message: "Code already used",
