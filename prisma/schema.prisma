@@ -27,6 +27,7 @@ model AssistTug {
   company   Company?  @relation(fields: [companyId], references: [id])
   tugMaster  User?  @relation(fields: [masterId], references: [id])
   tugDetails TugServiceDetail[]
+  
 }
 
 model Company {
@@ -114,6 +115,7 @@ model TugServiceDetail {
   mobTime DateTime?
   demobTime DateTime?
   activity          AssistActivity @default(ASSIST_BERTHING)
+  @@unique([tugServiceId, assistTugId])
 }
 
 model User {
