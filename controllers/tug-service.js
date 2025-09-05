@@ -95,10 +95,27 @@ module.exports = {
           masterId: Number(user.id), // karena relasi one-to-one, cukup begini
         }
       },
-      include: {
+      select: { activity  :true,
         tugService: {
-          include: {
-            pilotageService: true, // ambil pilotageService dari tugService
+          select: {
+            idJasa : true, status: true,
+            pilotageService: { 
+              select : { 
+                idJasa : true , 
+                lastPort : true, 
+                nextPort : true, 
+                startDate : true, 
+                startTime : true,
+                shipDetails : {select : {
+                  shipName : true,
+                  grt : true , 
+                  loa : true,
+                }},
+                terminalStart : {select : {name : true , code : true}}, 
+                terminalEnd :{select : {name : true, code : true}},
+                agency: {select : {name : true}},
+              }
+            },
           },
         },
         assistTug: true, // kalau mau sekalian ambil data assistTug
