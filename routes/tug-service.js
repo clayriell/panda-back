@@ -1,15 +1,23 @@
 const express = require("express");
 const { authenticate } = require("../middleware/auth");
 const { mustRole } = require("../middleware/role");
-const { getAll, detail, getByCompany , getService, getServiceByTug, assistMob} = require("../controllers/tug-service");
+const { getAll, getDetail, getByCompany , assistMob, getServiceByTugMaster, getServiceApproved, assistConnect, assistDisconnect, submit, create} = require("../controllers/tug-service");
 
 const router = express.Router();
 
-router.get("/", authenticate, mustRole("TUG_MASTER"), getServiceByTug);
+//Tug Service
+router.get("/", authenticate, mustRole("TUG_MASTER"), getServiceByTugMaster);
 router.get("/sys-all", authenticate, mustRole("SYS_ADMIN"), getAll);
-router.get("/all", authenticate, getService);
-router.get("/:id/detail", authenticate, detail);
+router.get("/all", authenticate, getServiceApproved);
+router.get("/:id/detail", authenticate, getDetail);
 router.get("/company", authenticate, getByCompany);
+router.get("/:id/submit", authenticate, submit);
+router.post("/", authenticate , mustRole("ADMIN"), create)
+
+
+//Tug Service Detail action
 router.put("/:id/mob", authenticate, mustRole("TUG_MASTER"), assistMob);
+router.put("/:id/connect", authenticate, mustRole("TUG_MASTER"), assistConnect);
+router.put("/:id/disconnect", authenticate, mustRole("TUG_MASTER"), assistDisconnect);
 
 module.exports = router;

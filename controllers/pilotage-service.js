@@ -1,6 +1,8 @@
 const prisma = require("../config/db");
 
 module.exports = {
+
+  // PILOTAGE SERVICE ACTION
   getAll: async (req, res, next) => {
     try {
       const pilotageService = await prisma.pilotageService.findMany({
@@ -54,7 +56,128 @@ module.exports = {
       next(error); // diteruskan ke middleware error global
     }
   },
+  getService: async (req, res) => {
+    try {
+      const user = req.user;
+      const service = await prisma.pilotageService.findMany({
+        where: {
+          companyId: Number(user.companyId),
+          status: { notIn: ["REQUESTED", "CANCELED", "REJECTED"] },
+        },
+        include: {
+          agency: true,
+          terminalStart: true,
+          terminalEnd: true,
+          shipDetails: true,
+          tugServices: {
+            include: { tugDetails: { include: { assistTug: true } } },
+          },
+        },
+      });
 
+      return res.status(200).json({
+        status: true,
+        message: "Success get all",
+        data: service,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
+  },
+  getRequestedServicebByCompany: async (req, res) => {
+    try {
+      const user = req.user;
+
+      const service = await prisma.pilotageService.findMany({
+        where: {
+          companyId: user.companyId,
+          status: "REQUESTED",
+        },
+        include: {
+          agency: true,
+          shipDetails: true,
+          terminalStart: true,
+          terminalEnd: true,
+        },
+      });
+      return res.status(200).json({
+        status: true,
+        message: "Success get all",
+        data: service,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
+  },
+  detail: async (req, res) => {
+    try {
+      const user = req.user;
+      const { id } = req.params;
+
+      const service = await prisma.pilotageService.findUnique({
+        where: { id: Number(id) },
+        include: {
+          shipDetails : true, 
+          agency: {
+            select: {
+              name: true,
+            },
+          },
+          terminalStart: {
+            select: {
+              name: true,
+            },
+          },
+          terminalEnd: { select: { name: true } },
+          tugServices: {
+            select: {
+              tugDetails: {
+                select: {
+                  assistTug: { select: { shipName: true } },
+                  connectTime: true,
+                  disconnectTime: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!service) {
+        return res.status(404).json({
+          status: false,
+          mesasge: "pilotage service not found",
+        });
+      }
+
+      if (user.companyId !== service.companyId) {
+        return res.status(403).json({
+          status: false,
+          message: "Forbidden access user, please check your company",
+        });
+      }
+
+      return res.status(200).json({
+        status: true,
+        message: "success get pilotage service detail",
+        data: service,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
+  },
   create: async (req, res, next) => {
   try {
     const {
@@ -169,79 +292,13 @@ module.exports = {
       data: result,
     });
   } catch (error) {
-    console.error("Error creating PilotageService:", error);
+    // console.error("Error creating PilotageService:", error);
     return res.status(400).json({
       status: false,
       message: error.message || "Failed to create PilotageService",
     });
   }
-}
-,
-
-
-
-  detail: async (req, res) => {
-    try {
-      const user = req.user;
-      const { id } = req.params;
-
-      const service = await prisma.pilotageService.findUnique({
-        where: { id: Number(id) },
-        include: {
-          shipDetails : true, 
-          agency: {
-            select: {
-              name: true,
-            },
-          },
-          terminalStart: {
-            select: {
-              name: true,
-            },
-          },
-          terminalEnd: { select: { name: true } },
-          tugServices: {
-            select: {
-              tugDetails: {
-                select: {
-                  assistTug: { select: { shipName: true } },
-                  connectTime: true,
-                  disconnectTime: true,
-                },
-              },
-            },
-          },
-        },
-      });
-
-      if (!service) {
-        return res.status(404).json({
-          status: false,
-          mesasge: "pilotage service not found",
-        });
-      }
-
-      if (user.companyId !== service.companyId) {
-        return res.status(403).json({
-          status: false,
-          message: "Forbidden access user, please check your company",
-        });
-      }
-
-      return res.status(200).json({
-        status: true,
-        message: "success get pilotage service detail",
-        data: service,
-      });
-    } catch (error) {
-      return res.status(500).json({
-        status: false,
-        message: "Internal server error",
-        error: error.message,
-      });
-    }
   },
-
   approve: async (req, res) => {
     try {
       const { id } = req.params;
@@ -287,25 +344,15 @@ module.exports = {
           data: {
             status: "APPROVED",
             createdBy: user.id,
-          },
-          include: { tugServices: true }, // kita butuh id tugService kalau ada
+          }, // kita butuh id tugService kalau ada
         });
-
-        // Step 2: kalau ada tugService, approve juga (1:1 by bisnis rule)
-        if (approved.tugServices.length > 0) {
-          await tx.tugService.update({
-            where: { id: approved.tugServices[0].id }, // update tunggal
-            data: { status: "APPROVED" },
-          });
-        }
 
         // Optional: re-fetch biar relasi yang dikembalikan sudah up-to-date
-        const withRelations = await tx.pilotageService.findUnique({
+        const approvedService = await tx.pilotageService.findUnique({
           where: { id: approved.id },
-          include: { tugServices: true },
         });
 
-        return withRelations;
+        return approvedService;
       });
 
       return res.status(200).json({
@@ -402,6 +449,56 @@ module.exports = {
       });
     }
   },
+  submit: async (req, res) => {
+    try {
+      const user = req.user;
+      const { id } = req.params;
+      const { docNumber } = req.body;
+
+      const service = await prisma.pilotageService.findUnique({
+        where: { id: Number(id) },
+      });
+
+      if (!service) {
+        return res.status(404).json({
+          status: false,
+          message: "Service not found",
+        });
+      }
+      if (user.companyId !== service.companyId) {
+        return res.status(401).json({
+          status: false,
+          message: "Forbidden access user, please check your company",
+        });
+      }
+
+      const updatedService = await prisma.pilotageService.update({
+        where: { id: Number(id) },
+        data: {
+          status: "SUBMITTED",
+          submittedBy: Number(user.id),
+          submitTime: new Date(),
+        },
+      });
+
+      return res.status(200).json({
+        status: true,
+        message: "Success submit pilotage service",
+        data: updatedService,
+      });
+    } catch (error) {
+      console.error("Error submiting pilotage service:", error);
+      return res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
+  },
+  // CREATE ASSIST TUG REQUEST (NEED TO SEARCH PILOTAGE SERVICE FIRST)
+
+
+  //PILOT ACTION
   onBoard: async (req, res) => {
     try {
       const user = req.user;
@@ -504,113 +601,6 @@ module.exports = {
       });
     } catch (error) {
       console.error("Error completing pilotage service:", error);
-      return res.status(500).json({
-        status: false,
-        message: "Internal server error",
-        error: error.message,
-      });
-    }
-  },
-  submit: async (req, res) => {
-    try {
-      const user = req.user;
-      const { id } = req.params;
-      const { docNumber } = req.body;
-
-      const service = await prisma.pilotageService.findUnique({
-        where: { id: Number(id) },
-      });
-
-      if (!service) {
-        return res.status(404).json({
-          status: false,
-          message: "Service not found",
-        });
-      }
-      if (user.companyId !== service.companyId) {
-        return res.status(401).json({
-          status: false,
-          message: "Forbidden access user, please check your company",
-        });
-      }
-
-      const updatedService = await prisma.pilotageService.update({
-        where: { id: Number(id) },
-        data: {
-          status: "SUBMITTED",
-          submittedBy: Number(user.id),
-          submitTime: new Date(),
-        },
-      });
-
-      return res.status(200).json({
-        status: true,
-        message: "Success submit pilotage service",
-        data: updatedService,
-      });
-    } catch (error) {
-      console.error("Error submiting pilotage service:", error);
-      return res.status(500).json({
-        status: false,
-        message: "Internal server error",
-        error: error.message,
-      });
-    }
-  },
-  getService: async (req, res) => {
-    try {
-      const user = req.user;
-      const service = await prisma.pilotageService.findMany({
-        where: {
-          companyId: Number(user.companyId),
-          status: { notIn: ["REQUESTED", "CANCELED", "REJECTED"] },
-        },
-        include: {
-          agency: true,
-          terminalStart: true,
-          terminalEnd: true,
-          shipDetails: true,
-          tugServices: {
-            include: { tugDetails: { include: { assistTug: true } } },
-          },
-        },
-      });
-
-      return res.status(200).json({
-        status: true,
-        message: "Success get all",
-        data: service,
-      });
-    } catch (error) {
-      return res.status(500).json({
-        status: false,
-        message: "Internal server error",
-        error: error.message,
-      });
-    }
-  },
-  getRequestedServicebByCompany: async (req, res) => {
-    try {
-      const user = req.user;
-
-      const service = await prisma.pilotageService.findMany({
-        where: {
-          companyId: user.companyId,
-          status: "REQUESTED",
-        },
-        include: {
-          agency: true,
-          shipDetails: true,
-          terminalStart: true,
-          terminalEnd: true,
-        },
-      });
-      return res.status(200).json({
-        status: true,
-        message: "Success get all",
-        data: service,
-      });
-    } catch (error) {
       return res.status(500).json({
         status: false,
         message: "Internal server error",

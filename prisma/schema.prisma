@@ -61,9 +61,9 @@ model PilotageService {
   rate           Int?           
   submitTime     DateTime?
   submittedBy    Int?
-  submittedUser  User?         @relation("submittedBy", fields: [submittedBy], references: [id])
+  submittedUser  User?         @relation("PilotageServiceSubmittedBy", fields: [submittedBy], references: [id])
   createdBy      Int?
-  creator        User?         @relation("createdBy", fields: [createdBy], references: [id])
+  creator        User?         @relation("PilotageServiceCreatedBy", fields: [createdBy], references: [id])
 
   shipDetails    ShipDetail[]
   tugServices    TugService[]
@@ -100,6 +100,11 @@ model TugService {
   idJasa            Int?           // eksternal
   status            ServiceStatus    @default(APPROVED)
   amount            Decimal          @db.Decimal(10,2)
+  submitTime     DateTime?
+  submittedBy    Int?
+  submittedUser  User?         @relation("TugServiceSubmittedBy", fields: [submittedBy], references: [id])
+  createdBy      Int?
+  creator        User?         @relation("TugServiceCreatedBy", fields: [createdBy], references: [id])
 
   tugDetails        TugServiceDetail[]
 }
@@ -114,6 +119,7 @@ model TugServiceDetail {
   disconnectTime DateTime?
   mobTime DateTime?
   demobTime DateTime?
+  status        TugStatus @default(WAITING)
   activity          AssistActivity @default(ASSIST_BERTHING)
   @@unique([tugServiceId, assistTugId])
 }
@@ -131,8 +137,10 @@ model User {
   company   Company?         @relation(fields: [companyId], references: [id])
   assistTug AssistTug?
   // relation ke pilotageService (submitter & creator)
-  submittedServices PilotageService[] @relation("submittedBy")
-  createdServices   PilotageService[] @relation("createdBy")
+  submittedServices PilotageService[] @relation("PilotageServiceSubmittedBy")
+  createdServices   PilotageService[] @relation("PilotageServiceCreatedBy")
+  submittedTugServices TugService[] @relation("TugServiceSubmittedBy")
+  createdTugServices   TugService[] @relation("TugServiceCreatedBy")
 }
 
 enum Area {
@@ -153,6 +161,13 @@ enum ServiceStatus {
   PAID
   CHECK
   CANCELED
+}
+enum TugStatus {
+  WAITING
+  ON_MOB
+  ON_WORK
+  ON_DEMOB
+  COMPLETED
 }
 
 enum Role {
