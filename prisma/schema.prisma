@@ -42,7 +42,7 @@ model PilotageService {
   id             Int           @id @default(autoincrement())
   docNumber      String?
   idJasa         Int?        // data eksternal
-  agencyId       Int          // mungkin perlu tabel Agency nanti?
+  agencyId       Int          
   companyId      Int?
   company        Company?      @relation(fields: [companyId], references: [id])
   activity       Activity @default(BERTHING)

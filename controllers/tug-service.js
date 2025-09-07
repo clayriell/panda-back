@@ -275,62 +275,129 @@ module.exports = {
   }
 },
   //APPROVE TUG SERVICE
+   approve : async  (req , res ) => {
+    const user = req.user 
+    const {id} = req.params
+
+    try {
+      const serviceExist  = await prisma.tugService.findUnique({
+        where : {id : Number(id)}       
+      })
+
+      if (!serviceExist){
+        return res.statu(400).json({
+          status : false, message :"Tug service not found"
+        })
+      }
+            if (user.companyId !== serviceExsist.companyId) {
+        return res.status(403).json({
+          status: false,
+          message: "Forbidden access user, please check your company",
+        });
+      }
+
+      if (serviceExsist.status === "APPROVED") {
+        return res.status(409).json({
+          status: false,
+          message: "Pilotage Service already approved.",
+        });
+      }
+
+      if (serviceExsist.status !== "REQUESTED") {
+        return res
+          .status(400)
+          .json({ status: false, message: "Invalid Pilotage Service status." });
+      }
+
+      const updateService = await prisma.tugService.update({
+        where : {id : Number(id)},
+        data: {
+          status : "APPROVED",
+          createdBy  :Number(user.id)
+        },
+         include : {
+          pilotageService: true, 
+           tugDetails : true
+        }
+      })
+
+      return res.status(200).json({
+        status : true , message : "Tug service approved successfully" , data : updateService
+      })
+    } catch (error) {
+      console.error("Error approving service:", error);
+      return res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
+  },
+
   //REJECT TUG SERVICE
   //CANCEL TUG SERVICE
   //SUBMIT TUG SERVICE (NOT FIXED YET)
   submit: async (req, res) => {
-    try {
+  try {
     const user = req.user
-    const {id} = req.params
-    
-    const assistTug = await prisma.tugService.findUnique({
-      where: { id : Number(id)},
+    const { id } = req.params
+    const tugServiceId = Number(id)
+
+    const tugService = await prisma.tugService.findUnique({
+      where: { id: tugServiceId },
     })
 
-    if (!assistTug) {
+    if (!tugService) {
       return res.status(404).json({
         status: false,
-        message: "Assist tug not found",
+        message: "Tug service not found",
       })
     }
-    if(assistTug.status !== "COMPLETED" ){
+
+    if (tugService.status !== "COMPLETED") {
       return res.status(400).json({
-        status : false , message : "Invalid service status"
+        status: false,
+        message: "Tug service must be COMPLETED before submitting."
+,
+      })
+    }
+
+    const tugOnWork = await prisma.tugServiceDetail.findMany({
+      where: {
+        tugServiceId,
+        status: { in: ["WAITING", "ON_MOB", "ON_WORK", "ON_DEMOB"] },
+      },
+    })
+
+    if (tugOnWork.length > 0) {
+      return res.status(400).json({
+        status: false,
+        message: "Assist tug haven't finished the work.",
       })
     }
 
     // update status tug service
-    await prisma.tugService.update({
-      where: { id },
-      data: { 
+    const updatedTugService = await prisma.tugService.update({
+      where: { id: tugServiceId },
+      data: {
         status: "SUBMITTED",
-
-       },
-    })
-
-    // update mob time tug service detail
-    const updateServiceDetail = await prisma.tugServiceDetail.update({
-      where: {
-        tugServiceId_assistTugId: {
-          tugServiceId: id,
-          assistTugId: assistTug.id,
-        },
+        submitTime: new Date(),
+        submittedBy: Number(user.id),
       },
-      data: { mobTime: new Date() },
-      include: { tugService: true },
     })
 
     return res.status(200).json({
       status: true,
-      message: "Assist tug mob success",
-      data: updateServiceDetail,
+      message: "Tug service submitted successfully",
+      data: updatedTugService,
     })
   } catch (error) {
-    console.error("Error assistMob:", error)
+    console.error("Error submitting tug service:", error)
     return res.status(500).json({
-      status: false,
-      message: "Internal server error",
-    })
+  status: false,
+  message: error.message || "Internal server error",
+})
+
   }
 },
   
@@ -338,13 +405,13 @@ module.exports = {
   // ASSIST TUG DETAIL ACTION
 assistMob: async (req, res) => {
     try {
-    const jakartaTime = new Date().toLocaleString("sv-SE", { timeZone: "Asia/Jakarta" })
+    // const jakartaTime = new Date().toLocaleString("sv-SE", { timeZone: "Asia/Jakarta" })
     const user = req.user
     const id = Number(req.params.id) // tugServiceId
 
     // cari assistTug milik user (role: TUG_MASTER)
     const assistTug = await prisma.assistTug.findUnique({
-      where: { masterId: user.id },
+      where: { masterId: Number(user.id) },
     })
 
     if (!assistTug) {
@@ -370,6 +437,7 @@ assistMob: async (req, res) => {
         message: "Tug Service not found",
       })
     }
+
 
     // update status tug service
     await prisma.tugService.update({
@@ -448,7 +516,7 @@ assistConnect: async (req, res) => {
 
     return res.status(200).json({
       status: true,
-      message: "Assist tug connect success",
+      message: "Assist Tug connect success",
       data: updateServiceDetail,
     })
   } catch (error) {
@@ -490,8 +558,6 @@ assistDisconnect: async (req, res) => {
         message: "Tug Service not found",
       })
     }
-
-    // update mob time tug service detail
     const updateServiceDetail = await prisma.tugServiceDetail.update({
       where: {
         tugServiceId_assistTugId: {
@@ -522,9 +588,18 @@ assistDemob: async (req, res) => {
     const id = Number(req.params.id)
 
     const assistTug = await prisma.assistTug.findUnique({
-      where: { masterId: user.id },
+      where: { masterId: Number(user.id) },
     })
 
+    const serviceExist = await prisma.tugService.findUnique({
+      where : { id : id}
+    })
+
+    if(!serviceExist){
+      return res.status(404).json({
+        status : false , message : "Tug service not found" 
+      })
+    }
     if (!assistTug) {
       return res.status(404).json({
         status: false,
@@ -547,44 +622,49 @@ assistDemob: async (req, res) => {
         message: "Tug Service not found",
       })
     }
+    if(assistServiceExist.masterId !== Number(user.id)){
+      return res.status(403).json({
+        status :false, message : "Forbidden access user."
+      })
+    }
 
-    const tugOnWork = await prisma.tugServiceDetail.findMany({
-      where : {tugServiceId: id, status : {in : ["WAITING" , "ON_MOB" ,"ON_WORK", "ON_DEMOB"]}},
-    })
-
-    if(tugOnWork){
-      const updateTugServiceDetail = await prisma.tugServiceDetail.findUnique({
-         where: {
+    const updateTugServiceDetail = await prisma.tugServiceDetail.update({
+      where: {
         tugServiceId_assistTugId: {
           tugServiceId: id,
           assistTugId: assistTug.id, 
         },
+      },
         data : {
           demobTime : new Date(),
           status : "COMPLETED"
         }, 
         include : {tugService : true}
-      }
-      })
-        return res.status(200).json({
-          status : true , 
-          message : "Success completing assist tug service." , 
-          data : updateTugServiceDetail
-        })
-    }
-
-    const updateTugService = await prisma.tugService.update({
-      where : {id : id},
-      data: { status : "COMPLETED" },
-      include : {tugDetails: true}
+    })
+    
+    const tugOnWork = await prisma.tugServiceDetail.findMany({
+      where : {tugServiceId: id, status : {in : ["WAITING" , "ON_MOB" ,"ON_WORK", "ON_DEMOB"]}},
     })
 
-      return res.status(200).json({
-        status : true , 
-        message : "Success completing assist tug service. tug service status updated", 
-        data : updateTugService
-      })
     
+    if (tugOnWork.length === 0) {
+  const updateTugService  = await prisma.tugService.update({
+    where : {id : id},
+    data : { status : "COMPLETED" },
+    include : {tugDetails : true}
+  })
+  return res.status(200).json({
+    status : true , 
+    message : "Success completing assist tug service." , 
+    data : updateTugService
+  })
+}
+
+return res.status(200).json({
+  status : true , 
+  message : "Success completing assist tug detail." , 
+  data : updateTugServiceDetail
+})
   } catch (error) {
     console.error("Error Assist demob:", error)
     return res.status(500).json({

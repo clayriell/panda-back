@@ -471,6 +471,11 @@ module.exports = {
           message: "Forbidden access user, please check your company",
         });
       }
+      if(service.status !== "COMPLETED"){
+        return res.status(400).json({
+          status : false , message : "Invalid service status"
+        })
+      }
 
       const updatedService = await prisma.pilotageService.update({
         where: { id: Number(id) },
@@ -478,6 +483,8 @@ module.exports = {
           status: "SUBMITTED",
           submittedBy: Number(user.id),
           submitTime: new Date(),
+          
+          
         },
       });
 

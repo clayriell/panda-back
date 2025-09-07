@@ -1,7 +1,7 @@
 const express = require("express");
 const { authenticate } = require("../middleware/auth");
 const { mustRole } = require("../middleware/role");
-const { getAll, getDetail, getByCompany , assistMob, getServiceByTugMaster, getServiceApproved, assistConnect, assistDisconnect, submit, create} = require("../controllers/tug-service");
+const { getAll, getDetail, getByCompany , assistMob, getServiceByTugMaster, getServiceApproved, assistConnect, assistDisconnect, submit, create, assistDemob} = require("../controllers/tug-service");
 
 const router = express.Router();
 
@@ -19,5 +19,7 @@ router.post("/", authenticate , mustRole("ADMIN"), create)
 router.put("/:id/mob", authenticate, mustRole("TUG_MASTER"), assistMob);
 router.put("/:id/connect", authenticate, mustRole("TUG_MASTER"), assistConnect);
 router.put("/:id/disconnect", authenticate, mustRole("TUG_MASTER"), assistDisconnect);
+router.put("/:id/demob", authenticate, mustRole("TUG_MASTER"), assistDemob);
+
 
 module.exports = router;
