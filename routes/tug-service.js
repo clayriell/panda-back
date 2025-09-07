@@ -1,7 +1,7 @@
 const express = require("express");
 const { authenticate } = require("../middleware/auth");
 const { mustRole } = require("../middleware/role");
-const { getAll, getDetail, getByCompany , assistMob, getServiceByTugMaster, getServiceApproved, assistConnect, assistDisconnect, submit, create, assistDemob} = require("../controllers/tug-service");
+const { getAll, getDetail, getByCompany , assistMob, getServiceByTugMaster, getServiceApproved, assistConnect, assistDisconnect, submit, create, assistDemob, getServiceRequested, getAllRequested} = require("../controllers/tug-service");
 
 const router = express.Router();
 
@@ -9,6 +9,8 @@ const router = express.Router();
 router.get("/", authenticate, mustRole("TUG_MASTER"), getServiceByTugMaster);
 router.get("/sys-all", authenticate, mustRole("SYS_ADMIN"), getAll);
 router.get("/all", authenticate, getServiceApproved);
+router.get("/sys-requested", authenticate, getAllRequested);
+router.get("/requested", authenticate, getServiceRequested);
 router.get("/:id/detail", authenticate, getDetail);
 router.get("/company", authenticate, getByCompany);
 router.get("/:id/submit", authenticate, submit);
