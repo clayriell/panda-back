@@ -117,7 +117,7 @@ module.exports = {
       });
     }
   },
-  detail: async (req, res) => {
+  getDetail: async (req, res) => {
     try {
       const user = req.user;
       const { id } = req.params;
@@ -125,6 +125,9 @@ module.exports = {
       const service = await prisma.pilotageService.findUnique({
         where: { id: Number(id) },
         include: {
+          pilot : {
+            select : {name : true}
+          },
           shipDetails : true, 
           agency: {
             select: {

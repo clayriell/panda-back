@@ -5,7 +5,7 @@ const {
   create,
   approve,
   reject,
-  detail,
+  getDetail,
   onBoard,
   offBoard,
   submit,
@@ -21,7 +21,7 @@ router.get("/sys-all", authenticate, mustRole("SYS_ADMIN"), getAll); // get all 
 router.get("/sys-requested", authenticate, mustRole("SYS_ADMIN"), getRequestedServices);
 router.get("/all",authenticate, getService);
 router.get("/requested", authenticate, getRequestedServicebByCompany);
-router.get("/:id/detail", authenticate, detail);
+router.get("/:id/detail", authenticate, getDetail);
 router.put("/:id/approve", authenticate, mustRole("ADMIN"), approve);
 router.put("/:id/reject", authenticate, mustRole("ADMIN"), reject);
 router.put("/:id/onBoard", authenticate, mustRole("PILOT"), onBoard);

@@ -5,7 +5,7 @@ module.exports = {
   getAll: async (req, res) => {
     try {
       const tugs = await prisma.assistTug.findMany({
-        include: { tugDetails: true },
+        include: { tugDetails: true , tugMaster: {select : {name : true}}},
       });
 
       return res.status(200).json({
@@ -22,7 +22,7 @@ module.exports = {
       const user = req.user;
       const tugs = await prisma.assistTug.findMany({
         where: { companyId: Number(user.companyId) },
-        include: { tugDetails: true },
+        include: { tugDetails: true , tugMaster : {select : {name : true}}},
       });
 
       return res.status(200).json({

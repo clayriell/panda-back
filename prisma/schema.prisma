@@ -70,6 +70,7 @@ model PilotageService {
   terminalStart  Terminal?    @relation("StartTerminal", fields: [terminalStartId], references: [id])
   terminalEnd    Terminal?    @relation("EndTerminal", fields: [terminalEndId], references: [id])
   agency         Agency @relation(fields:[agencyId], references:[id])
+  pilot          User?   @relation(fields: [pilotId], references: [id])
 }
 
 model ShipDetail {
@@ -141,6 +142,7 @@ model User {
   createdServices   PilotageService[] @relation("PilotageServiceCreatedBy")
   submittedTugServices TugService[] @relation("TugServiceSubmittedBy")
   createdTugServices   TugService[] @relation("TugServiceCreatedBy")
+  pilotageServices PilotageService[]
 }
 
 enum Area {

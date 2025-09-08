@@ -154,7 +154,7 @@ module.exports = {
             }
 
           },
-          tugDetails: true,
+          tugDetails: {select : {assistTug : true , mobTime : true, connectTime : true, disconnectTime: true , demobTime:true, activity: true, status:true}},
         },
       });
 
@@ -529,6 +529,11 @@ assistMob: async (req, res) => {
         message: "Tug Service not found",
       })
     }
+    if(assistTug.masterId !== Number(user.id)){
+      return res.status(403).json({
+        status :false, message : "Forbidden access user."
+      })
+    }
 
 
     // update status tug service
@@ -714,7 +719,7 @@ assistDemob: async (req, res) => {
         message: "Tug Service not found",
       })
     }
-    if(assistServiceExist.masterId !== Number(user.id)){
+    if(assistTug.masterId !== Number(user.id)){
       return res.status(403).json({
         status :false, message : "Forbidden access user."
       })
