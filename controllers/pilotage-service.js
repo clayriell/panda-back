@@ -9,6 +9,7 @@ module.exports = {
         where : {status : {
         }},
         include: {
+          pilot : {select : {name : true}},
           agency: true,
           terminalStart: true,
           terminalEnd: true,
@@ -20,27 +21,10 @@ module.exports = {
         orderBy: { id: "desc" },
       });
 
-      // Attach pilot names
-      const servicesWithPilots = await Promise.all(
-        pilotageService.map(async (service) => {
-          let pilot = null;
-          if (service.pilotId) {
-            const pilotUser = await prisma.user.findUnique({
-              where: { id: service.pilotId },
-              select: { name: true },
-            });
-            if (pilotUser) {
-              pilot = { name: pilotUser.name };
-            }
-          }
-          return { ...service, pilot };
-        })
-      );
-
       return res.status(200).json({
         status: true,
         message: "Success get all pilotage data",
-        data: servicesWithPilots,
+        data: pilotageService,
       });
     } catch (error) {
       console.error("Error fetching pilotageService:", error);
@@ -52,6 +36,7 @@ module.exports = {
       const pilotageService = await prisma.pilotageService.findMany({
         where: { status: "REQUESTED" },
         include: {
+          pilot : {select : {name : true}},
           agency: true,
           terminalStart: true,
           terminalEnd: true,
@@ -63,27 +48,10 @@ module.exports = {
         orderBy: { id: "desc" },
       });
 
-      // Attach pilot names
-      const servicesWithPilots = await Promise.all(
-        pilotageService.map(async (service) => {
-          let pilot = null;
-          if (service.pilotId) {
-            const pilotUser = await prisma.user.findUnique({
-              where: { id: service.pilotId },
-              select: { name: true },
-            });
-            if (pilotUser) {
-              pilot = { name: pilotUser.name };
-            }
-          }
-          return { ...service, pilot };
-        })
-      );
-
       return res.status(200).json({
         status: true,
         message: "Success get requested pilotage data",
-        data: servicesWithPilots,
+        data: pilotageService,
       });
     } catch (error) {
       console.error("Error fetching pilotageService:", error);
@@ -159,10 +127,8 @@ module.exports = {
       const service = await prisma.pilotageService.findUnique({
         where: { id: Number(id) },
         include: {
-          pilot : {
-            select : {name : true}
-          },
-          shipDetails : true,
+          pilot : {select : {name : true}},
+          shipDetails : true, 
           agency: {
             select: {
               name: true,
@@ -202,25 +168,10 @@ module.exports = {
         });
       }
 
-      // Fetch pilot name if pilotId exists
-      let pilot = null;
-      if (service.pilotId) {
-        const pilotUser = await prisma.user.findUnique({
-          where: { id: service.pilotId },
-          select: { name: true },
-        });
-        if (pilotUser) {
-          pilot = { name: pilotUser.name };
-        }
-      }
-
-      // Attach pilot to service
-      const serviceWithPilot = { ...service, pilot };
-
       return res.status(200).json({
         status: true,
         message: "success get pilotage service detail",
-        data: serviceWithPilot,
+        data: service,
       });
     } catch (error) {
       return res.status(500).json({
