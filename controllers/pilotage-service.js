@@ -469,7 +469,7 @@ module.exports = {
         });
       }
       if (user.companyId !== service.companyId) {
-        return res.status(401).json({
+        return res.status(40).json({
           status: false,
           message: "Forbidden access user, please check your company",
         });
