@@ -29,7 +29,7 @@ module.exports = {
           name,
           email,
           password: hashedPassword,
-          role,
+          role, 
           picture: "",
           companyId,
           isActive: false,
@@ -143,6 +143,7 @@ module.exports = {
     try {
       const userExsist = await prisma.user.findUnique({
         where: { username: user.username },
+        include:{company:{select:{name:true}}}
       });
 
       if (!userExsist) {

@@ -16,8 +16,8 @@ module.exports = {
   getList: async (req, res) => {
     try {
       const terminals = await prisma.terminal.findMany({
-        select: {
-          id: true,
+        select: { 
+          // id: true,  
           code: true,
           name: true,
         },

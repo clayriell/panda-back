@@ -147,6 +147,8 @@ module.exports = {
                   assistTug: { select: { shipName: true } },
                   connectTime: true,
                   disconnectTime: true,
+                  status : true , 
+                  activity : true,
                 },
               },
             },
@@ -177,7 +179,7 @@ module.exports = {
       return res.status(500).json({
         status: false,
         message: "Internal server error",
-        error: error.message,
+        error: error.message, 
       });
     }
   },
@@ -469,7 +471,7 @@ module.exports = {
         });
       }
       if (user.companyId !== service.companyId) {
-        return res.status(40).json({
+        return res.status(401).json({
           status: false,
           message: "Forbidden access user, please check your company",
         });
