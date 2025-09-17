@@ -147,10 +147,12 @@ module.exports = {
         include: {
           pilotageService: { 
             include : { 
-              shipDetails : true  , 
+              shipDetails : true, 
               terminalStart: true,
               terminalEnd : true, 
               agency:  true,
+              company: true,
+              pilot: {select : {name : true}}
             }
 
           },

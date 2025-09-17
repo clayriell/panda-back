@@ -142,6 +142,9 @@ module.exports = {
           terminalEnd: { select: { name: true } },
           tugServices: {
             select: {
+              id:true,
+              idJasa : true, 
+              status : true,
               tugDetails: {
                 select: {
                   assistTug: { select: { shipName: true } },
@@ -153,6 +156,7 @@ module.exports = {
               },
             },
           },
+          company : {select : {name : true}}
         },
       });
 
