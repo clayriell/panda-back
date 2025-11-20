@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Form Hasil Jasa</title>
+  </head>
+  <body>
+    <h2>Form Input Hasil Jasa</h2>
+
+    <form action="/jasa/submit" method="POST">
+      <label>Jenis Jasa:</label>
+      <select name="jenis_jasa">
+        <option value="Pandu">Pandu</option>
+        <option value="Tunda">Tunda</option>
+        <option value="PMDH">PMDH</option>
+        <option value="Lainnya">Lainnya</option>
+      </select>
+      <br /><br />
+
+      <label>Kode Perusahaan:</label>
+      <input type="text" name="kode_perusahaan" required />
+      <br /><br />
+
+      <label>Tanggal Selesai:</label>
+      <input type="date" name="tanggal_selesai" required />
+      <br /><br />
+
+      <label>Deskripsi / Catatan:</label>
+      <textarea name="catatan"></textarea>
+      <br /><br />
+
+      <button type="submit">Simpan</button>
+    </form>
+  </body>
+</html>

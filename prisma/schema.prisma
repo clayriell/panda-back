@@ -145,6 +145,17 @@ model User {
   pilotageServices PilotageService[]
 }
 
+model ServiceLog {
+  id          Int      @id @default(autoincrement())
+  serviceId   Int?
+  serviceType String
+  userId      Int
+  action      String
+  createdAt   DateTime @default(now())
+
+  @@index([serviceType, serviceId])
+}
+
 enum Area {
   TANJUNG_UNCANG
   BATU_AMPAR

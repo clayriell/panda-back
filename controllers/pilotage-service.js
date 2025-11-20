@@ -270,6 +270,8 @@ module.exports = {
                   disconnectTime: det.disconnectTime || null,
                   mobTime: det.mobTime || null,
                   demobTime: det.demobTime || null,
+                  status : "WAITING",
+                  
                 };
               }),
             },
@@ -505,7 +507,6 @@ module.exports = {
       });
     }
   },
-  // CREATE ASSIST TUG REQUEST (NEED TO SEARCH PILOTAGE SERVICE FIRST)
 
 
   //PILOT ACTION

@@ -86,7 +86,6 @@ module.exports = {
         .json({ status: false, message: "Internal server error" });
     }
   },
-  //Get tugServiceDetails by tug_tugmaster
   getServiceByTugMaster: async (req, res) => {
   try {
     const user = req.user;
@@ -318,7 +317,7 @@ module.exports = {
     if (!pilotageServiceExist) {
       return res.status(400).json({
         status: false,
-        message: "Pilotage service not found",
+        message: "Pilotage service not found.",
       })
     }
 
