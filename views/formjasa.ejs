@@ -1,34 +1,102 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Form Hasil Jasa</title>
-  </head>
-  <body>
-    <h2>Form Input Hasil Jasa</h2>
+<style>
+  @page {
+    size: A4;
+    margin: 20mm;
+  }
 
-    <form action="/jasa/submit" method="POST">
-      <label>Jenis Jasa:</label>
-      <select name="jenis_jasa">
-        <option value="Pandu">Pandu</option>
-        <option value="Tunda">Tunda</option>
-        <option value="PMDH">PMDH</option>
-        <option value="Lainnya">Lainnya</option>
-      </select>
-      <br /><br />
+  body {
+    font-family: "Arial", sans-serif;
+    margin: 0;
+    padding: 0;
+  }
 
-      <label>Kode Perusahaan:</label>
-      <input type="text" name="kode_perusahaan" required />
-      <br /><br />
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 20mm;
+    margin: 0 auto;
+    background: white;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+  }
 
-      <label>Tanggal Selesai:</label>
-      <input type="date" name="tanggal_selesai" required />
-      <br /><br />
+  h1, h2, h3 {
+    margin: 0;
+    padding: 0;
+  }
 
-      <label>Deskripsi / Catatan:</label>
-      <textarea name="catatan"></textarea>
-      <br /><br />
+  .section-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    border-bottom: 2px solid #333;
+    padding-bottom: 5px;
+  }
 
-      <button type="submit">Simpan</button>
-    </form>
-  </body>
-</html>
+  .row {
+    display: flex;
+    margin: 4px 0;
+  }
+
+  .label {
+    width: 180px;
+    color: #444;
+    font-weight: bold;
+  }
+
+  /* Print mode remove shadow */
+  @media print {
+    body {
+      background: white;
+    }
+    .page {
+      box-shadow: none;
+    }
+  }
+</style>
+
+
+<div class="page">
+
+  <h1 style="text-align:center; margin-bottom:20px;">
+    FORM HASIL PELAYANAN JASA
+  </h1>
+
+  <div class="section-title">A. Informasi Jasa</div>
+  <div class="row"><div class="label">ID Jasa</div>: <%= service.idJasa %></div>
+  <div class="row"><div class="label">Status</div>: <%= service.status %></div>
+  <div class="row"><div class="label">Activity</div>: <%= service.activity %></div>
+
+  <div class="section-title">B. Informasi Kapal</div>
+  <% service.shipDetails.forEach(ship => { %>
+    <div class="row"><div class="label">Nama Kapal</div>: <%= ship.shipName %></div>
+    <div class="row"><div class="label">Master</div>: <%= ship.master %></div>
+    <div class="row"><div class="label">Bendera</div>: <%= ship.flag %></div>
+    <div class="row"><div class="label">GT / LOA</div>: <%= ship.grt %> / <%= ship.loa %> m</div>
+  <% }) %>
+
+  <div class="section-title">C. Pilot Service</div>
+  <div class="row"><div class="label">Pilot</div>: <%= service.pilot?.name %></div>
+  <div class="row"><div class="label">On Board</div>: <%= service.startDateFormatted %> - <%= service.startTimeFormatted %></div>
+  <div class="row"><div class="label">Off Board</div>: <%= service.endDateFormatted %> - <%= service.endTimeFormatted %></div>
+
+  <% if (service.tugServices.length > 0) { %>
+    <div class="section-title">D. Tug Service</div>
+    <% service.tugServices.forEach(t => { %>
+      <div class="row"><div class="label">ID Tug Service</div>: <%= t.idJasa %></div>
+      <% t.tugDetails.forEach(tug => { %>
+        <div class="row"><div class="label">Assist Tug</div>: <%= tug.assistTug.shipName %></div>
+        <div class="row"><div class="label">Connect</div>: <%= tug.connectDate %> - <%= tug.connectTime %></div>
+        <div class="row"><div class="label">Disconnect</div>: <%= tug.disconnectDate %> - <%= tug.disconnectTime %></div>
+      <% }) %>
+    <% }) %>
+  <% } %>
+
+  <div class="section-title">E. Signatures</div>
+  <div style="margin-top:40px;">
+    <div class="row"><div class="label">Dibuat Oleh</div>: ___________________</div>
+    <div class="row"><div class="label">Diperiksa Oleh</div>: ___________________</div>
+    <div class="row"><div class="label">Disetujui</div>: ___________________</div>
+  </div>
+
+</div>

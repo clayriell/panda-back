@@ -11,6 +11,7 @@ const {
   submit,
   getRequestedServicebByCompany,
   getService,
+  getForm,
 } = require("../controllers/pilotage-service");
 
 const { authenticate } = require("../middleware/auth");
@@ -22,11 +23,12 @@ router.get("/sys-requested", authenticate, mustRole("SYS_ADMIN"), getRequestedSe
 router.get("/all",authenticate, getService);
 router.get("/requested", authenticate, getRequestedServicebByCompany);
 router.get("/:id/detail", authenticate, getDetail);
+router.get("/:id/form",getForm)
 router.put("/:id/approve", authenticate, mustRole("ADMIN"), approve);
 router.put("/:id/reject", authenticate, mustRole("ADMIN"), reject);
 router.put("/:id/onBoard", authenticate, mustRole("PILOT"), onBoard);
 router.put("/:id/offBoard", authenticate, mustRole("PILOT"), offBoard);
-router.put("/:id/submit", authenticate, mustRole("PILOT"), submit);
+router.put("/:id/submit", authenticate, mustRole("ADMIN"), submit);
 router.post("/request", authenticate, create);
 
 module.exports = router;

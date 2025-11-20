@@ -9,8 +9,8 @@ const app = express();
 // Middleware
 app.use(express.json());
 app.use(morgan("dev"));
-// Set view engine ke EJS
-app.set('view engine', 'ejs');
+app.set("view engine", "ejs");
+app.set("views", "./views");
 
 // // single origin
 // app.use(cors({

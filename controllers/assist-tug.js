@@ -65,6 +65,7 @@ module.exports = {
 
       const assistTug = await prisma.assistTug.findFirst({
         where: { masterId: user.id },
+        include: {tugMaster :{ select : {name : true}}}
       })
       
       if(!assistTug){

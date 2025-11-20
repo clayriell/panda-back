@@ -31,7 +31,7 @@ module.exports = {
       next(error); // diteruskan ke middleware error global
     }
   },
-  getRequestedServices: async (req, res, next) => {
+  getRequestedServices:  async (req, res, next) => {
     try {
       const pilotageService = await prisma.pilotageService.findMany({
         where: { status: "REQUESTED" },
@@ -142,15 +142,21 @@ module.exports = {
           terminalEnd: { select: { name: true } },
           tugServices: {
             select: {
+              id:true,
+              idJasa : true, 
+              status : true,
               tugDetails: {
                 select: {
                   assistTug: { select: { shipName: true } },
                   connectTime: true,
                   disconnectTime: true,
+                  status : true , 
+                  activity : true,
                 },
               },
             },
           },
+          company : {select : {name : true}}
         },
       });
 
@@ -177,10 +183,45 @@ module.exports = {
       return res.status(500).json({
         status: false,
         message: "Internal server error",
-        error: error.message,
+        error: error.message, 
       });
     }
   },
+  getForm : async (req, res) =>{
+    const id = Number(req.params.id);
+
+  const service = await prisma.pilotageService.findUnique({
+    where: { id },
+    include: {
+      pilot: true,
+      company: true,
+      agency: true,
+      terminalStart: true,
+      terminalEnd: true,
+      shipDetails: true,
+      tugServices: {
+        include: {
+          tugDetails: {
+            include: { assistTug: true }
+          }
+        }
+      }
+    }
+  });
+   if (!service) {
+  return res.status(404).send("Service not found");
+}
+
+  // Format tanggal di sini
+  service.startDateFormatted = service.startDate?.toLocaleDateString("id-ID");
+  service.startTimeFormatted = service.startTime?.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+
+  service.endDateFormatted = service.endDate?.toLocaleDateString("id-ID");
+  service.endTimeFormatted = service.endTime?.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+
+  res.render("formjasa", { service });
+  }
+  ,
   create: async (req, res, next) => {
   try {
     const {
@@ -209,6 +250,21 @@ module.exports = {
       });
     }
 
+    const id = Number(idJasa);
+
+    const [pilotageServiceExist, tugServiceExist] = await Promise.all([
+      prisma.pilotageService.findFirst({ where: { idJasa: id } }),
+      prisma.tugService.findFirst({ where: { idJasa: id } })
+    ]);
+
+    if (pilotageServiceExist || tugServiceExist) {
+      return res.status(400).json({
+        status: false,
+        message: `Service with this ID already made in ${
+          pilotageServiceExist ? "pilotage service" : "tug service"
+        }`
+      });
+    }
     // 🔹 Transaction
     const result = await prisma.$transaction(async (tx) => {
       // 1️⃣ Buat PilotageService
@@ -471,7 +527,7 @@ module.exports = {
         });
       }
       if (user.companyId !== service.companyId) {
-        return res.status(40).json({
+        return res.status(401).json({
           status: false,
           message: "Forbidden access user, please check your company",
         });

@@ -92,9 +92,11 @@ module.exports = {
 
     const tugServices = await prisma.tugServiceDetail.findMany({
       where: {
+        status: {notIn : ["COMPLETED"] },
         assistTug: {
-          masterId: Number(user.id), // karena relasi one-to-one, cukup begini
-        }
+          masterId: Number(user.id),
+        },
+        tugService : {status : {notIn : ["REQUESTED" , "COMPLETED", "REJECTED" , "CANCELED"]}},
       },
       select: { activity  :true,
         tugService: {
@@ -146,10 +148,12 @@ module.exports = {
         include: {
           pilotageService: { 
             include : { 
-              shipDetails : true  , 
+              shipDetails : true, 
               terminalStart: true,
               terminalEnd : true, 
               agency:  true,
+              company: true,
+              pilot: {select : {name : true}}
             }
 
           },
