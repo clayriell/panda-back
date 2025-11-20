@@ -1,7 +1,22 @@
 const express = require("express");
 const { authenticate } = require("../middleware/auth");
 const { mustRole } = require("../middleware/role");
-const { getAll, getDetail, getByCompany , assistMob, getServiceByTugMaster, getServiceApproved, assistConnect, assistDisconnect, submit, create, assistDemob, getServiceRequested, getAllRequested} = require("../controllers/tug-service");
+const {
+  getAll,
+  getDetail,
+  getByCompany,
+  assistMob,
+  getServiceByTugMaster,
+  getServiceApproved,
+  assistConnect,
+  assistDisconnect,
+  submit,
+  create,
+  approve,
+  assistDemob,
+  getServiceRequested,
+  getAllRequested,
+} = require("../controllers/tug-service");
 
 const router = express.Router();
 
@@ -14,14 +29,18 @@ router.get("/requested", authenticate, getServiceRequested);
 router.get("/:id/detail", authenticate, getDetail);
 router.get("/company", authenticate, getByCompany);
 router.get("/:id/submit", authenticate, submit);
-router.post("/", authenticate , mustRole("ADMIN"), create)
-
+router.post("/", authenticate, mustRole("ADMIN"), create);
 
 //Tug Service Detail action
+router.put("/:id/approve", authenticate, mustRole("ADMIN"), approve);
 router.put("/:id/mob", authenticate, mustRole("TUG_MASTER"), assistMob);
 router.put("/:id/connect", authenticate, mustRole("TUG_MASTER"), assistConnect);
-router.put("/:id/disconnect", authenticate, mustRole("TUG_MASTER"), assistDisconnect);
+router.put(
+  "/:id/disconnect",
+  authenticate,
+  mustRole("TUG_MASTER"),
+  assistDisconnect
+);
 router.put("/:id/demob", authenticate, mustRole("TUG_MASTER"), assistDemob);
-
 
 module.exports = router;
