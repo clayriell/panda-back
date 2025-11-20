@@ -9,6 +9,8 @@ const app = express();
 // Middleware
 app.use(express.json());
 app.use(morgan("dev"));
+app.set("view engine", "ejs");
+app.set("views", "./views");
 
 // // single origin
 // app.use(cors({

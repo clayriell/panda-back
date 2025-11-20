@@ -11,7 +11,7 @@ const { mustRole } = require("../middleware/role");
 const router = express.Router();
 
 // Endpoint login
-router.post("/register",authenticate, mustRole("SYS_ADMIN"), register);
+router.post("/register",authenticate, mustRole("SYS_ADMIN"), register);   
 router.get("/", authenticate, mustRole("SYS_ADMIN"), getAll);
 router.put("/:id/activate", authenticate, mustRole("SYS_ADMIN"), activate);
 router.put("/:id/deactivate", authenticate, mustRole("SYS_ADMIN"), deactivate);
