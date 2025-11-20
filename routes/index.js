@@ -9,6 +9,7 @@ const terminalRouter = require("./terminal");
 const assistTugRouter = require("./assist-tug");
 const companyRouter = require("./company");
 const tugServiceRouter = require("./tug-service");
+const {getForm} =  require("../controllers/pilotage-service");
 // Mount semua route
 router.use("/auth", authRouter);
 router.use("/user", userRouter);
@@ -18,5 +19,6 @@ router.use("/assist-tug", assistTugRouter);
 router.use("/company", companyRouter);
 router.use("/pilotage-service", pilotageServiceRouter);
 router.use("/tug-service", tugServiceRouter);
+router.use("/service/:id", getForm)
 
 module.exports = router;

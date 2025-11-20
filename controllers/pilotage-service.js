@@ -190,8 +190,8 @@ module.exports = {
   getForm : async (req, res) =>{
     const id = Number(req.params.id);
 
-  const service = await prisma.pilotageService.findUnique({
-    where: { id },
+  const service = await prisma.pilotageService.findFirst({
+    where: { idJasa : id },
     include: {
       pilot: true,
       company: true,
@@ -208,18 +208,27 @@ module.exports = {
       }
     }
   });
-   if (!service) {
-  return res.status(404).send("Service not found");
+if (!service) {
+  return res.status(404).render("notfound", {
+    message_en: "Service not found, please enter a valid pilotage service id",
+    message_id: "Layanan tidak ditemukan, mohon masukkan 'ID Jasa Pandu' yang benar"
+  });
 }
 
-  // Format tanggal di sini
+// Format tanggal di sini
   service.startDateFormatted = service.startDate?.toLocaleDateString("id-ID");
   service.startTimeFormatted = service.startTime?.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 
   service.endDateFormatted = service.endDate?.toLocaleDateString("id-ID");
   service.endTimeFormatted = service.endTime?.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+;
 
-  res.render("formjasa", { service });
+res.render("formjasa", {
+  service,
+  error: null
+});
+
+  
   }
   ,
   create: async (req, res, next) => {
@@ -366,32 +375,32 @@ module.exports = {
       const user = req.user;
 
       // Ambil service + relasi tugServices untuk validasi awal
-      const serviceExsist = await prisma.pilotageService.findUnique({
+      const serviceExist = await prisma.pilotageService.findUnique({
         where: { id: Number(id) },
         include: { tugServices: true },
       });
 
-      if (!serviceExsist) {
+      if (!serviceExist) {
         return res
           .status(404)
           .json({ status: false, message: "Pilotage Service not found." });
       }
 
-      if (user.companyId !== serviceExsist.companyId) {
+      if (user.companyId !== serviceExist.companyId) {
         return res.status(403).json({
           status: false,
           message: "Forbidden access user, please check your company",
         });
       }
 
-      if (serviceExsist.status === "APPROVED") {
+      if (serviceExist.status === "APPROVED") {
         return res.status(409).json({
           status: false,
           message: "Pilotage Service already approved.",
         });
       }
 
-      if (serviceExsist.status !== "REQUESTED") {
+      if (serviceExist.status !== "REQUESTED") {
         return res
           .status(400)
           .json({ status: false, message: "Invalid Pilotage Service status." });

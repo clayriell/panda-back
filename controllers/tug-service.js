@@ -376,7 +376,9 @@ module.exports = {
 
     try {
       const serviceExist  = await prisma.tugService.findUnique({
-        where : {id : Number(id)}       
+        where : {id : Number(id)} , 
+        include : { pilotageService :  {select : {company: true}}
+        }
       })
 
       if (!serviceExist){
@@ -384,21 +386,21 @@ module.exports = {
           status : false, message :"Tug service not found"
         })
       }
-            if (user.companyId !== serviceExsist.companyId) {
-        return res.status(403).json({
-          status: false,
-          message: "Forbidden access user, please check your company",
-        });
-      }
+        if (user.companyId !== serviceExist.pilotageService.company.id   ) {
+          return res.status(403).json({
+            status: false,
+            message: "Forbidden access user, please check your company"
+          });   
+        }
 
-      if (serviceExsist.status === "APPROVED") {
+      if (serviceExist.status === "APPROVED") {
         return res.status(409).json({
           status: false,
           message: "Pilotage Service already approved.",
         });
       }
 
-      if (serviceExsist.status !== "REQUESTED") {
+      if (serviceExist.status !== "REQUESTED") {
         return res
           .status(400)
           .json({ status: false, message: "Invalid Pilotage Service status." });
