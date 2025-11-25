@@ -144,6 +144,7 @@ model User {
   submittedTugServices TugService[] @relation("TugServiceSubmittedBy")
   createdTugServices   TugService[] @relation("TugServiceCreatedBy")
   pilotageServices PilotageService[]
+  signatures     DocSignature[]
 }
 
 model ServiceLog {
@@ -165,6 +166,7 @@ model DocSignature {
 
   user               User             @relation(fields: [userId], references: [id])
   service            PilotageService  @relation(fields: [pilotageServiceId], references: [id])
+  
 }
 
 

@@ -1,3 +1,0 @@
--- AlterTable
-ALTER TABLE `pilotageservice` MODIFY `startDate` DATE NOT NULL DEFAULT CURRENT_DATE,
-    MODIFY `startTime` TIME NOT NULL DEFAULT CURRENT_TIME;
