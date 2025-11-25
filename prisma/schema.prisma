@@ -40,7 +40,7 @@ model Company {
 
 model PilotageService {
   id             Int           @id @default(autoincrement())
-  docNumber      String?
+  docNumber      String? @unique
   idJasa         Int?        // data eksternal
   agencyId       Int          
   companyId      Int?
@@ -71,6 +71,7 @@ model PilotageService {
   terminalEnd    Terminal?    @relation("EndTerminal", fields: [terminalEndId], references: [id])
   agency         Agency @relation(fields:[agencyId], references:[id])
   pilot          User?   @relation(fields: [pilotId], references: [id])
+  signatures     DocSignature[]
 }
 
 model ShipDetail {
@@ -155,6 +156,17 @@ model ServiceLog {
 
   @@index([serviceType, serviceId])
 }
+
+model DocSignature {
+  id                 Int      @id @default(autoincrement())
+  userId             Int
+  pilotageServiceId  Int
+  signedAt           DateTime @default(now())
+
+  user               User             @relation(fields: [userId], references: [id])
+  service            PilotageService  @relation(fields: [pilotageServiceId], references: [id])
+}
+
 
 enum Area {
   TANJUNG_UNCANG
