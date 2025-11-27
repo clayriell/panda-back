@@ -1,6 +1,8 @@
 const prisma = require("../config/db");
 const crypto = require("crypto");
 const QRCode = require("qrcode")
+const {generateDocumentNumber } = require('../utils/documentNumberGenerator');
+const company = require("./company");
 module.exports = {
 
   // PILOTAGE SERVICE ACTION
@@ -188,121 +190,125 @@ module.exports = {
       });
     }
   },
+  getForm: async (req, res) => {
+    try {
+      const id = Number(req.params.id);
 
-getForm: async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-
-    const service = await prisma.pilotageService.findFirst({
-      where: { idJasa: id },
-      include: {
-        pilot: true,
-        company: true,
-        agency: true,
-        terminalStart: true,
-        terminalEnd: true,
-        shipDetails: true,
-        signatures: true, 
-        tugServices: {
-          include: {
-            tugDetails: {
-              include: { assistTug: true }
+      const service = await prisma.pilotageService.findFirst({
+        where: { idJasa: id },
+        include: {
+          pilot: true,
+          company: true,
+          agency: true,
+          terminalStart: true,
+          terminalEnd: true,
+          shipDetails: true,
+          signatures: true, 
+          tugServices: {
+            include: {
+              tugDetails: {
+                include: { assistTug: true }
+              }
             }
           }
         }
-      }
-    });
-
-    // Jika tidak ada service
-    if (!service) {
-      return res.status(404).render("notfound", {
-        message_en: "Service not found, please enter a valid pilotage service id",
-        message_id: "Layanan tidak ditemukan, mohon masukkan 'ID Jasa Pandu' yang benar"
       });
-    }
 
-    // Format tanggal & waktu
-    if (service.tugServices && service.tugServices.length > 0) {
-  service.tugServices = service.tugServices.map(tugService => {
-    tugService.tugDetails = tugService.tugDetails.map(tug => {
-      
-      // Format connect time
-      tug.connectTimeFormatted = tug.connectTime
-        ? new Date(tug.connectTime).toLocaleTimeString("id-ID", {
-            hour: "2-digit",
-            minute: "2-digit"
-          })
-        : "-";
+      // Jika tidak ada service
+      if (!service) {
+        return res.status(404).render("notfound", {
+          message_en: "Service not found, please enter a valid pilotage service id",
+          message_id: "Layanan tidak ditemukan, mohon masukkan 'ID Jasa Pandu' yang benar"
+        });
+      }
 
-      // Format disconnect time
-      tug.disconnectTimeFormatted = tug.disconnectTime
-        ? new Date(tug.disconnectTime).toLocaleTimeString("id-ID", {
-            hour: "2-digit",
-            minute: "2-digit"
-          })
-        : "-";
+      // Format tanggal & waktu
+      if (service.tugServices && service.tugServices.length > 0) {
+    service.tugServices = service.tugServices.map(tugService => {
+      tugService.tugDetails = tugService.tugDetails.map(tug => {
+        
+        // Format connect time
+        tug.connectTimeFormatted = tug.connectTime
+          ? new Date(tug.connectTime).toLocaleTimeString("id-ID", {
+              hour: "2-digit",
+              minute: "2-digit"
+            })
+          : "-";
 
-      return tug;
-    });
+        // Format disconnect time
+        tug.disconnectTimeFormatted = tug.disconnectTime
+          ? new Date(tug.disconnectTime).toLocaleTimeString("id-ID", {
+              hour: "2-digit",
+              minute: "2-digit"
+            })
+          : "-";
 
-    return tugService;
-  });
-}
-      service.startDateFormatted =
-        service.startDate?.toLocaleDateString("id-ID") || "-";
+        return tug;
+      });
 
-      service.startTimeFormatted =
-        service.startTime?.toLocaleTimeString("id-ID", {
-          hour: "2-digit",
-          minute: "2-digit"
-        })  || "-";
-
-      service.endDateFormatted =
-        service.endDate?.toLocaleDateString("id-ID") || "-";
-
-      service.endTimeFormatted =
-        service.endTime?.toLocaleTimeString("id-ID", {
-          hour: "2-digit",
-          minute: "2-digit"
-        }) || "-";
-    // ============================
-    //   SIGNATURE CHECK + QR CODE
-    // ============================
-    let pilotQR = null;
-    const signature = service.signatures?.[0]; 
-
-    if (signature?.token) {
-      // URL validasi signature
-      const url = `http://192.168.0.119:3000/api/validate/signature/${signature.token}`;
-
-      // generate QR
-      pilotQR = await QRCode.toDataURL(url);
-    }
-let logo = "/img/default-logo.jpg";
-
-if (service.companyId === 1) {
-  logo = "/img/logo-company1.png";
-} else if (service.companyId === 2) {
-  logo = "/img/logo-company2.png";
-}
-    return res.render("form-jasa", {
-      service,
-      pilotQR,
-      logo,
-      error: null
-
-    });
-
-  } catch (error) {
-    console.error("Error loading form:", error);
-
-    return res.status(500).render("error", {
-      message_en: "Internal server error",
-      message_id: "Terjadi kesalahan pada server",
-      error: error.message
+      return tugService;
     });
   }
-},
+        service.startDateFormatted =
+          service.startDate?.toLocaleDateString("id-ID") || "-";
+
+        service.startTimeFormatted =
+          service.startTime?.toLocaleTimeString("id-ID", {
+            hour: "2-digit",
+            minute: "2-digit"
+          })  || "-";
+
+        service.endDateFormatted =
+          service.endDate?.toLocaleDateString("id-ID") || "-";
+
+        service.endTimeFormatted =
+          service.endTime?.toLocaleTimeString("id-ID", {
+            hour: "2-digit",
+            minute: "2-digit"
+          }) || "-";
+      // ============================
+      //   SIGNATURE CHECK + QR CODE
+      // ============================
+      let pilotQR,managerQR = null;
+      const pilotSignature = service.signatures?.[0]; 
+      const managerSignature = service.signatures?.[1]; 
+
+      if(managerSignature?.token){
+        const msUrl = `http://192.168.0.119:3000/api/validate/signature/${managerSignature.token}`
+        managerQR = await QRCode.toDataURL(msUrl)
+      }
+      if (pilotSignature?.token) {
+        // URL validasi signature
+        const psUrl = `http://192.168.0.119:3000/api/validate/signature/${pilotSignature.token}`;
+        // generate QR
+        pilotQR = await QRCode.toDataURL(psUrl);
+      }
+  let logo = "/img/default-logo.jpg";
+
+  if (service.companyId === 1) {
+    logo = "/img/logo-company1.png";
+  } else if (service.companyId === 2) {
+    logo = "/img/logo-company2.png";
+  }
+      return res.render("form-jasa", {
+        service,
+        pilotQR,
+        managerQR,
+        logo,
+        error: null
+
+      });
+
+    } catch (error) {
+      console.error("Error loading form:", error);
+
+      return res.status(500).render("error", {
+        message_en: "Internal server error",
+        message_id: "Terjadi kesalahan pada server",
+        error: error.message
+      });
+    }
+  },
   create: async (req, res, next) => {
   try {
     const {
@@ -591,6 +597,89 @@ if (service.companyId === 1) {
       });
     }
   },
+  register: async (req ,res) =>{
+    const {id} = req.params
+    const user = req.user
+     const token = crypto.randomBytes(16).toString("hex");
+     
+    try {
+      
+    
+    const service = await prisma.pilotageService.findUnique({
+      where : {id : Number(id)}
+    })
+
+    if(!service){
+      return res.status(404).json({
+        status : false, 
+        message : "Service not found",
+      })
+    }
+    if(service.docNumber !== null){
+      return res.status(400).json({
+        status : false,  message : "Document already registered"
+      })
+    }
+    if (user.companyId !== service.companyId) {
+        return res.status(401).json({
+          status: false,
+          message: "Forbidden access user, please check your company",
+        });
+      }
+      if(service.status !== "COMPLETED"){
+        return res.status(400).json({
+          status : false , message : "Invalid service status"
+        })
+      }
+      let companyCode = ""
+
+      switch (service.companyId){
+        case 1: companyCode = "MDH";break;
+        case 2: companyCode = "PEL-ID-BTM";break;
+        case 3: companyCode = "BDP";break;
+        case 4: companyCode = "GSS";break;
+        case 5: companyCode = "SIS";break;
+        case 6: companyCode = "SCP";break; 
+      }
+      const docNumber = await generateDocumentNumber(companyCode)
+      const updatedService = await prisma.pilotageService.update({
+        where: { id: Number(id) },
+        data: {
+        docNumber : docNumber,  
+        },
+      });
+      const managerExist = await prisma.user.findFirst({
+        where : 
+        {
+          companyId : Number(user.companyId) , 
+          role : "MANAGER"
+        }
+      })
+
+      if(!managerExist){
+        return res.status(404).json({
+          status : false , message : "manager account not found"
+        })
+      }
+      const signManager  = await prisma.docSignature.create({
+        data : {
+          userId: managerExist.id,
+          pilotageServiceId: Number(id),
+          signedAt: new Date(),
+          token: token 
+        }
+      })
+      return res.status(200).json({
+        status : true , message: "Success register document", docNumber
+      })
+      } catch (error) { 
+        console.error("Error registering service document:", error);
+      return res.status(500).json({
+        status: false,
+        message: "Internal server error",
+        error: error.message,})
+    }
+  },
   submit: async (req, res) => {
     try {
       const user = req.user;
@@ -625,8 +714,6 @@ if (service.companyId === 1) {
           status: "SUBMITTED",
           submittedBy: Number(user.id),
           submitTime: new Date(),
-          
-          
         },
       });
 

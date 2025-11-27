@@ -165,8 +165,16 @@ model DocSignature {
   signedAt           DateTime @default(now())
   token              String
   user               User             @relation(fields: [userId], references: [id])
-  service            PilotageService  @relation(fields: [pilotageServiceId], references: [id])
-  
+  service            PilotageService  @relation(fields: [pilotageServiceId], references: [id]) 
+}
+model DocumentCounter {
+  id                 Int      @id @default(autoincrement())
+  companyCode        String
+  year               Int
+  month              Int
+  counter            Int        @default(0)
+
+  @@unique([companyCode,year,month])
 }
 
 
@@ -202,6 +210,7 @@ enum Role {
   ADMIN
   PILOT
   TUG_MASTER
+  MANAGER
 }
 enum Activity {
   BERTHING
