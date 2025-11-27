@@ -3,14 +3,17 @@ const express = require("express");
 const routes = require("./routes");
 const morgan = require("morgan");
 const cors = require("cors");
+const path = require("path");
 
 const app = express();
 
 // Middleware
 app.use(express.json());
 app.use(morgan("dev"));
+app.use(express.static(path.join(__dirname, "public")));
 app.set("view engine", "ejs");
 app.set("views", "./views");
+
 
 // // single origin
 // app.use(cors({

@@ -161,9 +161,9 @@ model ServiceLog {
 model DocSignature {
   id                 Int      @id @default(autoincrement())
   userId             Int
-  pilotageServiceId  Int
+  pilotageServiceId  Int  
   signedAt           DateTime @default(now())
-
+  token              String
   user               User             @relation(fields: [userId], references: [id])
   service            PilotageService  @relation(fields: [pilotageServiceId], references: [id])
   

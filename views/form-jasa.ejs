@@ -1,0 +1,501 @@
+<style>
+  @page {
+    size: A4;
+    /* margin: 10mm; */
+  }
+
+  body {
+    font-family: "Arial", sans-serif;
+    margin: 0;
+    padding: 0;
+    font-size: 10pt;
+  }
+
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 8mm;
+    margin: 0 auto;
+    background: white;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    position: relative;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    width:100%;
+    
+    border-bottom: solid 3px black  ;
+  }
+
+  .logo-box {
+    width: 130px;
+    height: 130px;
+    /* border: 1px solid #000; */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .logo-img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+  }
+
+  .company-info {
+    font-size: 8pt;
+    line-height: 1.2;
+    margin-left: auto; /* Dorong ke kanan */
+    text-align: right; /* Rata kanan */
+  }
+
+  .company-info strong {
+    font-size: 12pt;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 18pt;
+    font-weight: bold;
+    margin: 5px 0 0 0;
+    text-decoration: underline;
+  }
+
+  h2 {
+    text-align: center;
+    font-size: 13pt;
+    font-style: italic;
+    margin: 0 0 0 0;
+    font-weight: normal;
+  }
+  h3 {
+  text-align: center; /* semua isi h3 rata tengah */
+} 
+  h3 span {
+  display: inline-block; /* supaya width & margin auto berfungsi */
+  text-align: center;
+  border: 1px solid black;
+  width: 250px;
+  /* height: 12px; */
+  margin: 0 auto;
+  padding: 0px 2px ; 
+}
+
+  .declaration {
+    font-size: 9pt;
+    margin-bottom: 15px;
+    line-height: 1.4;
+  }
+
+  .content-box {
+    /* border: 2px solid #000; */
+    padding: 15px;
+    margin-bottom: 15px;
+  }
+
+  .info-row {
+    display: flex;
+    margin: 2px 0;
+  }
+
+  .info-label {
+    font-weight: bold;
+    min-width: 150px;
+    text-decoration: underline;
+    /* border-bottom: solid  black 1px */
+  }
+
+  .info-value {
+    flex: 1;
+    border-bottom: dotted  black 1px;
+  }
+.info-value-date {
+  display: inline-block;
+  border-bottom: 1px dotted black;
+  padding: 0 4px 2px 0; /* biar garis tidak terlalu mepet */
+  width: auto;            /* garis mengikuti panjang teks */
+  /* margin-left: 5px;       kasih jarak setelah ':' */
+}
+
+  .section-header {
+    font-weight: bold;
+    margin-top: 15px;
+    margin-bottom: 8px;
+    font-size: 9pt;
+    text-decoration: underline;
+  }
+
+  .tug-section {
+    border: 1px solid #000;
+    padding: 10px;
+    margin: 10px 0;
+  }
+
+  .tug-header {
+    font-weight: bold;
+    margin-bottom: 8px;
+    font-size: 9pt;
+  }
+
+  .footer-section {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
+    border-top: 2px solid #000;
+    padding-top: 10px;
+  }
+
+  .qr-box {
+    text-align: center;
+    flex: 1;
+  }
+  .qr-box span{
+    font-size: 8pt;
+    font-weight: bold;
+  }
+
+  .qr-placeholder {
+    width: 80px;
+    height: 80px;
+    border: 1px solid #000;
+    margin: 10px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8pt;
+  }
+
+  .qr-label {
+    font-size: 8pt;
+    font-weight: bold;
+    text-decoration: underline;
+  }
+
+  .note-section {
+    margin-top: 20px;
+    font-size: 8pt;
+    border-top: 1px solid #000;
+    padding-top: 10px;
+  }
+
+  .note-section strong {
+    display: block;
+    margin-bottom: 5px;
+  }
+
+  .two-column {
+    display: flex;
+    gap: 10px;
+  }
+
+  .column {
+    flex: 1;
+  }
+
+  .tug-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 10pt;
+}
+
+.tug-table th,
+.tug-table td {
+  border: 1px solid #000;
+  padding: 4px 6px;
+  text-align: left;
+}
+
+.tug-table th {
+  text-align: center;
+  background:lightgrey;
+  font-weight: bold;
+}
+
+
+  @media print {
+    body {
+      background: white;
+    }
+    .page {
+      box-shadow: none;
+      margin: 0;
+      padding: 10mm;
+    }
+  }
+</style>
+
+<div class="page">
+  <!-- Header -->
+    <div class="header">
+    <div class="logo-box">
+      <img src="<%= logo %>" class="logo-img">
+    </div>
+
+    <div class="company-info">
+      <strong>PT. MACCAHMA DHINA HARTIENDSPIN</strong><br>
+    </div>
+  </div>
+  
+  <!-- Title -->
+  <h1>BUKTI PEMAKAIAN JASA PANDU</h1>
+  <h2>PILOT CERTIFICATE</h2>
+  <h3>
+    No. <span>
+      <%= service.docNumber %>
+
+    </span> 
+  </h3>
+
+  <!-- Declaration -->
+ <!-- Main Content Box -->
+  <div class="content-box">
+    <!-- Two Column Layout -->
+    <div class="two-column">
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Nama Kapal</span>
+          <span class="info-value">:  <%= service.shipDetails[0]?.shipName || '-' %></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">Vessel</em>
+        </div>
+        
+        <div class="info-row">
+          <span class="info-label">Nama Nahkoda</span>
+          <span class="info-value">: <%= service.shipDetails[0]?.master || '-' %></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">Master Name</em>
+        </div>
+        
+        <div class="info-row">
+          <span class="info-label">Bendera</span>
+          <span class="info-value">: <%= service.shipDetails[0]?.flag %></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <span style="font-size: 8pt;">Flag</span>
+          
+        </div>
+        
+        <div class="info-row">
+          <span class="info-label" ">Datang Dari</span>
+          <span class="info-value" ">: <%= service.lastPort %></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">Last Port of Call</em>
+        </div>
+        
+        <div class="info-row">
+          <span class="info-label">Isi Kotor</span>
+          <span class="info-value">: <%= service.shipDetails[0]?.grt %></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">GRT</em>
+        </div>
+      </div>
+
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Panggilan</span>
+          <span class="info-value">: <%= service.shipDetails[0].callSign || "" %></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">Call Sign</em>
+        </div>
+        
+        <div class="info-row">
+          <span class="info-label">Keagenan Kapal :</span>
+          <span class="info-value">: <%= service.agency.name%></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">Agent</em>
+        </div>
+        
+        <div class="info-row">
+          <span class="info-label" >Tujuan Ke</span>
+          <span class="info-value" >: <%= service.nextPort%></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">Next Port of Call</em>
+        </div>
+        
+        <div class="info-row">
+          <span class="info-label">Panjang</span>
+          <span class="info-value">: <%= service.shipDetails[0]?.loa || '' %> m</span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">LOA</em>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pilot Declaration -->
+    <div class="info-row" style="margin-top: 10px;">
+     <span class="info-label"> Menerangkan bahwa sesuai dengan Surat Perintah Kerja (SPK) No</span>
+     <span class="info-value">: <%=  %></span>
+     </div>
+     <div class="info-row" style="margin-left: 0px;">
+      <em style="font-size: 9pt;">Declares that in accordance with</em>
+    </div>
+    <div style="margin: 5px 0;">
+      <span class="info-label">Kapal telah dipandu oleh Pandu Bandar</span>
+      <span class="info-value"><strong>: Capt. <%= service.pilot?.name %></span></strong>
+    </div>
+    <div class="info-row" style="margin-left: 0px; margin-bottom: 10px;">
+      <em style="font-size: 9pt;"> Ship has been piloted by the Marine Pilot</em>
+     </div>
+     
+    <div class="two-column" >
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Dari</span>
+          <span class="info-value">: <%= service.terminalStart.name %></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">From</em>
+        </div>
+      </div>
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Ke</span>
+          <span class="info-value">: <%= service.terminalEnd.name %></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">To</em>
+        </div>
+        </div>
+    </div>
+    <div class="info-row">
+          <span class="info-label">Pada tanggal</span>
+          <span class="info-value-date">: <%= service.startDateFormatted %></span>
+    </div>
+    <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">On Date</em>
+    </div>
+
+<!-- keterangan kegiatan -->
+
+
+    <div class="two-column" >
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Pandu Naik Kapal</span>
+          <span class="info-value">: <%= service.startTimeFormatted %></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">Pilot On Board</em>
+        </div>
+      </div>
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Kapal Bergerak</span>
+          <span class="info-value">: <%= service.startTimeFormatted%></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">Ship Start</em>
+        </div>
+        </div>
+    </div>
+    <div class="two-column" >
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Selesai Pandu</span>
+          <span class="info-value">: <%= service.endTimeFormatted %></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">Finished</em>
+        </div>
+      </div>
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Pandu Turun</span>
+          <span class="info-value">: <%= service.endTimeFormatted %></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">Pilot Get Off</em>
+        </div>
+        </div>
+    </div>
+    <div class="info-row" style="margin-top: 10px;">
+     <span class="info-label">Kapal telah menggunakan Kapal Tunda : </span>
+     <!-- <span class="info-value">: <%=  %></span> -->
+     </div>
+    <div class="info-row" style="margin-left: 0px;">
+      <em style="font-size: 9pt;">Ship has used the Tug Boat</em>
+    </div>
+    <table class="tug-table">
+  <thead>
+    <tr>
+      <th>Nama Kapal<br><em style="font-size:8pt;">Tug Name</em></th>
+      <th>Tenaga Mesin<br><em style="font-size:8pt;">Engine Power</em></th>
+      <th>Terima Tali<br><em style="font-size:8pt;">Line On</em></th>
+      <th>Lepas Tali<br><em style="font-size:8pt;">Line Off</em></th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <% service.tugServices?.forEach(t => { %>
+      <% t.tugDetails?.forEach(tug => { %>
+        <tr>
+          <td><%= tug.assistTug?.shipName || '-' %></td>
+          <td><%= tug.assistTug?.horsePower || '-' %></td>
+          <td><%= tug.connectTimeFormatted || '-' %></td>
+          <td><%= tug.disconnectTimeFormatted || '-' %></td>
+        </tr>
+      <% }) %>
+    <% }) %>
+  </tbody>
+</table>
+
+
+
+    </div>
+
+  <!-- QR Code Footer -->
+  <div class="footer-section">
+    <div class="qr-box">
+      <div class="qr-label">MANAJER PEMANDUAN <br>
+      </div>
+      <span>
+      PILOT MANAGER
+      </span>
+      <div class="qr-placeholder"><% if (pilotQR) { %>
+        <img src="<%= pilotQR %>" width="100">
+      <% } else { %>
+        <p>unsigned</p>
+      <% } %></div>
+    </div>
+    
+    <div class="qr-box">
+      <div class="qr-label">PANDU</div>
+      <span>PILOT</span>
+      <div class="qr-placeholder"><% if (pilotQR) { %>
+        <img src="<%= pilotQR %>" width="100">
+      <% } else { %>
+        <p>unsigned</p>
+      <% } %></div>
+          </div>
+    
+    <div class="qr-box">
+      <div class="qr-label" style="margin-top: 5px;">NAKHODA / AGEN</div>
+      <span>MASTER / AGENT</span>
+      <div class="qr-placeholder">MASTER SIGNATURE</div>
+    </div>
+  </div>
+
+  <!-- Notes -->
+  <div class="note-section">
+    <strong>CATATAN / NOTE:</strong>
+    <p style="margin: 5px 0; line-height: 1.4;">
+      Jasa kapal Tug Boat dihitung secara perubahan adanya standar-standar waktu pembulat dan atau dalam untuk dikembalikan (....menit).<br>
+      <em>Services charges of Tug Boat will be calculated based on this time for moving and the used again. System is awaiting the next order to return, it addition to be reported.</em><br>
+      <em>Please note: overhaul any important news / incident to be reported.</em>
+    </p>
+  </div>
+</div>

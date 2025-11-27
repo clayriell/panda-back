@@ -1,5 +1,6 @@
 const prisma = require("../config/db");
-
+const crypto = require("crypto");
+const QRCode = require("qrcode")
 module.exports = {
 
   // PILOTAGE SERVICE ACTION
@@ -187,50 +188,121 @@ module.exports = {
       });
     }
   },
-  getForm : async (req, res) =>{
+
+getForm: async (req, res) => {
+  try {
     const id = Number(req.params.id);
 
-  const service = await prisma.pilotageService.findFirst({
-    where: { idJasa : id },
-    include: {
-      pilot: true,
-      company: true,
-      agency: true,
-      terminalStart: true,
-      terminalEnd: true,
-      shipDetails: true,
-      tugServices: {
-        include: {
-          tugDetails: {
-            include: { assistTug: true }
+    const service = await prisma.pilotageService.findFirst({
+      where: { idJasa: id },
+      include: {
+        pilot: true,
+        company: true,
+        agency: true,
+        terminalStart: true,
+        terminalEnd: true,
+        shipDetails: true,
+        signatures: true, 
+        tugServices: {
+          include: {
+            tugDetails: {
+              include: { assistTug: true }
+            }
           }
         }
       }
+    });
+
+    // Jika tidak ada service
+    if (!service) {
+      return res.status(404).render("notfound", {
+        message_en: "Service not found, please enter a valid pilotage service id",
+        message_id: "Layanan tidak ditemukan, mohon masukkan 'ID Jasa Pandu' yang benar"
+      });
     }
-  });
-if (!service) {
-  return res.status(404).render("notfound", {
-    message_en: "Service not found, please enter a valid pilotage service id",
-    message_id: "Layanan tidak ditemukan, mohon masukkan 'ID Jasa Pandu' yang benar"
+
+    // Format tanggal & waktu
+    if (service.tugServices && service.tugServices.length > 0) {
+  service.tugServices = service.tugServices.map(tugService => {
+    tugService.tugDetails = tugService.tugDetails.map(tug => {
+      
+      // Format connect time
+      tug.connectTimeFormatted = tug.connectTime
+        ? new Date(tug.connectTime).toLocaleTimeString("id-ID", {
+            hour: "2-digit",
+            minute: "2-digit"
+          })
+        : "-";
+
+      // Format disconnect time
+      tug.disconnectTimeFormatted = tug.disconnectTime
+        ? new Date(tug.disconnectTime).toLocaleTimeString("id-ID", {
+            hour: "2-digit",
+            minute: "2-digit"
+          })
+        : "-";
+
+      return tug;
+    });
+
+    return tugService;
   });
 }
+      service.startDateFormatted =
+        service.startDate?.toLocaleDateString("id-ID") || "-";
 
-// Format tanggal di sini
-  service.startDateFormatted = service.startDate?.toLocaleDateString("id-ID");
-  service.startTimeFormatted = service.startTime?.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+      service.startTimeFormatted =
+        service.startTime?.toLocaleTimeString("id-ID", {
+          hour: "2-digit",
+          minute: "2-digit"
+        })  || "-";
 
-  service.endDateFormatted = service.endDate?.toLocaleDateString("id-ID");
-  service.endTimeFormatted = service.endTime?.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
-;
+      service.endDateFormatted =
+        service.endDate?.toLocaleDateString("id-ID") || "-";
 
-res.render("formjasa", {
-  service,
-  error: null
-});
+      service.endTimeFormatted =
+        service.endTime?.toLocaleTimeString("id-ID", {
+          hour: "2-digit",
+          minute: "2-digit"
+        }) || "-";
+    // ============================
+    //   SIGNATURE CHECK + QR CODE
+    // ============================
+    let pilotQR = null;
+    const signature = service.signatures?.[0]; 
 
-  
+    if (signature?.token) {
+      // URL validasi signature
+      const url = `http://192.168.0.119:3000/api/validate/signature/${signature.token}`;
+
+      // generate QR
+      pilotQR = await QRCode.toDataURL(url);
+    }
+let logo = "/img/default-logo.jpg";
+
+if (service.companyId === 1) {
+  logo = "/img/logo-company1.png";
+} else if (service.companyId === 2) {
+  logo = "/img/logo-company2.png";
+}
+    return res.render("form-jasa", {
+      service,
+      pilotQR,
+      logo,
+      error: null
+
+    });
+
+  } catch (error) {
+    console.error("Error loading form:", error);
+
+    return res.status(500).render("error", {
+      message_en: "Internal server error",
+      message_id: "Terjadi kesalahan pada server",
+      error: error.message
+    });
   }
-  ,
+},
   create: async (req, res, next) => {
   try {
     const {
@@ -410,7 +482,7 @@ res.render("formjasa", {
       const result = await prisma.$transaction(async (tx) => {
         // Step 1: approve pilotageService
         const approved = await tx.pilotageService.update({
-          where: { id: serviceExsist.id },
+          where: { id: serviceExist.id },
           data: {
             status: "APPROVED",
             createdBy: user.id,
@@ -630,6 +702,7 @@ res.render("formjasa", {
       const user = req.user;
       const { id } = req.params;
       const { note, rate } = req.body;
+      const token = crypto.randomBytes(16).toString("hex");
       const service = await prisma.pilotageService.findUnique({
         where: { id: Number(id) },
       });
@@ -658,7 +731,6 @@ res.render("formjasa", {
           message: "Invalid Service Status",
         });
       }
-
       const updatedService = await prisma.pilotageService.update({
         where: { id: Number(id) },
         data: {
@@ -666,12 +738,21 @@ res.render("formjasa", {
           status: "COMPLETED",
           endDate: new Date(),
           endTime: new Date(),
-          note: note,
-          rate: rate,
-        },
+          note,
+          rate,
+        }, 
       });
+
+      const signDocument = await  prisma.docSignature.create({
+    data: {
+    userId: user.id,
+    pilotageServiceId: Number(id),
+    signedAt: new Date(),
+    token: token  // kalau kamu tambahkan field ini
+  },
+});
       return res.status(200).json({
-        status: true,
+        status: false,
         message: "Success completing pilotage service",
         data: updatedService,
       });
