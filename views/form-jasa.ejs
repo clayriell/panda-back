@@ -216,6 +216,9 @@
   background:lightgrey;
   font-weight: bold;
 }
+.page-break {
+  page-break-before: always;
+}
 
 
   @media print {
@@ -483,14 +486,256 @@
           </div>
     
     <div class="qr-box">
-      <div class="qr-label" style="margin-top: 5px;">NAKHODA / AGEN</div>
+      <div class="qr-label"">NAKHODA / AGEN</div>
       <span>MASTER / AGENT</span>
-      <div class="qr-placeholder">MASTER SIGNATURE</div>
+      <div> 
+            <% if (masterSignature && masterSignature.signatureImage) { %>
+            <img 
+              src="<%= masterSignature.signatureImage %>" 
+              alt="Tanda Tangan Master" 
+              style="width: 250px; height: auto; "
+            />
+          <% } else { %>
+            <div class="qr-placeholder"><p>unsigned</p></div>
+          <% } %>
+      </div>
     </div>
   </div>
 
   <!-- Notes -->
-  <div class="note-section">
+  <div class="note-section">  
+    <strong>CATATAN / NOTE:</strong>
+    <p style="margin: 5px 0; line-height: 1.4;">
+      Jasa kapal Tug Boat dihitung secara perubahan adanya standar-standar waktu pembulat dan atau dalam untuk dikembalikan (....menit).<br>
+      <em>Services charges of Tug Boat will be calculated based on this time for moving and the used again. System is awaiting the next order to return, it addition to be reported.</em><br>
+      <em>Please note: overhaul any important news / incident to be reported.</em>
+    </p>
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+
+<div class="page">
+  <!-- Header -->
+    <div class="header">
+    <div class="logo-box">
+      <img src="<%= logo %>" class="logo-img">
+    </div>
+
+    <div class="company-info">
+      <strong>PT. MACCAHMA DHINA HARTIENDSPIN</strong><br>
+    </div>
+  </div>
+  
+  <!-- Title -->
+  <h1>BUKTI PEMAKAIAN JASA TUNDA</h1>
+  <h2>TUG BOAT RECEIPT</h2>
+  <h3>
+    No. <span>
+      <%= service.docNumber %>
+
+    </span> 
+  </h3>
+
+   <!-- Main Content Box -->
+  <div class="content-box">
+    <!-- Two Column Layout -->
+    <div class="two-column">
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Nama Kapal</span>
+          <span class="info-value">:  <%= service.shipDetails[0]?.shipName || '-' %></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">Vessel</em>
+        </div>
+        
+        <div class="info-row">
+          <span class="info-label">Nama Nahkoda</span>
+          <span class="info-value">: <%= service.shipDetails[0]?.master || '-' %></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">Master Name</em>
+        </div>
+        
+        <div class="info-row">
+          <span class="info-label">Bendera</span>
+          <span class="info-value">: <%= service.shipDetails[0]?.flag %></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <span style="font-size: 8pt;">Flag</span>
+          
+        </div>
+        
+        <div class="info-row">
+          <span class="info-label" ">Datang Dari</span>
+          <span class="info-value" ">: <%= service.lastPort %></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">Last Port of Call</em>
+        </div>
+        
+        <div class="info-row">
+          <span class="info-label">Isi Kotor</span>
+          <span class="info-value">: <%= service.shipDetails[0]?.grt %></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">GRT</em>
+        </div>
+      </div>
+
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Panggilan</span>
+          <span class="info-value">: <%= service.shipDetails[0].callSign || "" %></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">Call Sign</em>
+        </div>
+        
+        <div class="info-row">
+          <span class="info-label">Keagenan Kapal :</span>
+          <span class="info-value">: <%= service.agency.name%></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">Agent</em>
+        </div>
+        
+        <div class="info-row">
+          <span class="info-label" >Tujuan Ke</span>
+          <span class="info-value" >: <%= service.nextPort%></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">Next Port of Call</em>
+        </div>
+        
+        <div class="info-row">
+          <span class="info-label">Panjang</span>
+          <span class="info-value">: <%= service.shipDetails[0]?.loa || '' %> m</span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">LOA</em>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pilot Declaration -->
+    <div class="info-row" style="margin-top: 10px;">
+     <span class="info-label"> Menerangkan bahwa sesuai dengan Surat Perintah Kerja (SPK) No</span>
+     <span class="info-value">: <%=  %></span>
+     </div>
+     <div class="info-row" style="margin-left: 0px;">
+      <em style="font-size: 9pt;">Declares that in accordance with</em>
+    </div>
+    
+    <div class="info-row" style="margin-top: 25px;">
+          <span class="info-label">Pada tanggal</span>
+          <span class="info-value-date">: <%= service.startDateFormatted %></span>
+    </div>
+    <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">On Date</em>
+    </div> 
+    <div class="two-column" >
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Dari</span>
+          <span class="info-value">: <%= service.terminalStart.name %></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">From</em>
+        </div>
+      </div>
+      <div class="column">
+        <div class="info-row">
+          <span class="info-label">Ke</span>
+          <span class="info-value">: <%= service.terminalEnd.name %></span>
+        </div>
+        <div class="info-row" style="margin-left: 0px;">
+          <em style="font-size: 8pt;">To</em>
+        </div>
+        </div>
+    </div>
+
+    <div class="info-row" style="margin-top: 10px;">
+     <span class="info-label">Kapal telah menggunakan Kapal Tunda : </span>
+     <!-- <span class="info-value">: <%=  %></span> -->
+     </div>
+    <div class="info-row" style="margin-left: 0px;">
+      <em style="font-size: 9pt;">Ship has used the Tug Boat</em>
+    </div>
+    <table class="tug-table">
+  <thead>
+    <tr>
+      <th>Nama Kapal<br><em style="font-size:8pt;">Tug Name</em></th>
+      <th>Tenaga Mesin<br><em style="font-size:8pt;">Engine Power</em></th>
+      <th>Terima Tali<br><em style="font-size:8pt;">Line On</em></th>
+      <th>Lepas Tali<br><em style="font-size:8pt;">Line Off</em></th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <% service.tugServices?.forEach(t => { %>
+      <% t.tugDetails?.forEach(tug => { %>
+        <tr>
+          <td><%= tug.assistTug?.shipName || '-' %></td>
+          <td><%= tug.assistTug?.horsePower || '-' %></td>
+          <td><%= tug.connectTimeFormatted || '-' %></td>
+          <td><%= tug.disconnectTimeFormatted || '-' %></td>
+        </tr>
+      <% }) %>
+    <% }) %>
+  </tbody>
+</table>
+
+
+
+    </div>
+
+  <!-- QR Code Footer -->
+  <div class="footer-section">
+    <div class="qr-box">
+      <div class="qr-label">MANAJER PEMANDUAN <br>
+      </div>
+      <span>
+      PILOT MANAGER
+      </span>
+      <div class="qr-placeholder"><% if (managerQR) { %>
+        <img src="<%= managerQR  %>" width="100">
+      <% } else { %>
+        <p>unsigned</p>
+      <% } %></div>
+    </div>
+    
+    <div class="qr-box">
+      <div class="qr-label">NAKHODA KAPAL TUNDA</div>
+      <span>TUG MASTER</span>
+      <div class="qr-placeholder"><% if (tugMasterQR) { %>
+        <img src="<%= tugMasterQR %>" width="100">
+      <% } else { %>
+        <p>unsigned</p>
+      <% } %></div>
+          </div>
+    
+    <div class="qr-box">
+      <div class="qr-label"">NAKHODA / AGEN</div>
+      <span>MASTER / AGENT</span>
+      <div> 
+            <% if (masterSignature && masterSignature.signatureImage) { %>
+            <img 
+              src="<%= masterSignature.signatureImage %>" 
+              alt="Tanda Tangan Master" 
+              style="width: 250px; height: auto; "
+            />
+          <% } else { %>
+            <div class="qr-placeholder"><p>unsigned</p></div>
+          <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes -->
+  <div class="note-section">  
     <strong>CATATAN / NOTE:</strong>
     <p style="margin: 5px 0; line-height: 1.4;">
       Jasa kapal Tug Boat dihitung secara perubahan adanya standar-standar waktu pembulat dan atau dalam untuk dikembalikan (....menit).<br>

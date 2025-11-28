@@ -159,14 +159,18 @@ model ServiceLog {
 }
 
 model DocSignature {
-  id                 Int      @id @default(autoincrement())
-  userId             Int
-  pilotageServiceId  Int  
-  signedAt           DateTime @default(now())
-  token              String
-  user               User             @relation(fields: [userId], references: [id])
-  service            PilotageService  @relation(fields: [pilotageServiceId], references: [id]) 
+  id                Int       @id @default(autoincrement())
+  type              SignType  
+  userId            Int?
+  pilotageServiceId Int
+  signedAt          DateTime  @default(now())
+  token             String?   
+  signatureImage    String?  @db.LongText
+  
+  user    User?             @relation(fields: [userId], references: [id])
+  service PilotageService   @relation(fields: [pilotageServiceId], references: [id])
 }
+
 model DocumentCounter {
   id                 Int      @id @default(autoincrement())
   companyCode        String
@@ -224,4 +228,11 @@ enum AssistActivity {
   ASSIST_UNBERTHING
   SEA_TRIAL
   ASSIST_SHIFTING
+}
+
+enum SignType{
+  MANAGER
+  PILOT
+  TUG_MASTER
+  MASTER
 }

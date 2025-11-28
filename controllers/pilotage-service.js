@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const QRCode = require("qrcode")
 const {generateDocumentNumber } = require('../utils/documentNumberGenerator');
 const company = require("./company");
+const { type } = require("os");
 module.exports = {
 
   // PILOTAGE SERVICE ACTION
@@ -269,9 +270,19 @@ module.exports = {
       // ============================
       //   SIGNATURE CHECK + QR CODE
       // ============================
-      let pilotQR,managerQR = null;
-      const pilotSignature = service.signatures?.[0]; 
-      const managerSignature = service.signatures?.[1]; 
+      let pilotQR,managerQR , tugMasterQR = null;
+      const pilotSignature = service.signatures?.find(
+  s => s.type === "PILOT"
+);
+      const managerSignature = service.signatures?.find(
+  s => s.type === "MANAGER"
+);
+      const tugMasterSignature = service.signatures?.find(
+  s => s.type === "TUG_MASTER"
+);
+const masterSignature = service.signatures?.find(
+  s => s.type === "MASTER"
+);
 
       if(managerSignature?.token){
         const msUrl = `http://192.168.0.119:3000/api/validate/signature/${managerSignature.token}`
@@ -282,6 +293,12 @@ module.exports = {
         const psUrl = `http://192.168.0.119:3000/api/validate/signature/${pilotSignature.token}`;
         // generate QR
         pilotQR = await QRCode.toDataURL(psUrl);
+      }
+      if (tugMasterSignature?.token) {
+        // URL validasi signature
+        const psUrl = `http://192.168.0.119:3000/api/validate/signature/${tugMasterSignature.token}`;
+        // generate QR
+        tugMasterQR = await QRCode.toDataURL(psUrl);
       }
   let logo = "/img/default-logo.jpg";
 
@@ -294,6 +311,8 @@ module.exports = {
         service,
         pilotQR,
         managerQR,
+        tugMasterQR,
+        masterSignature,
         logo,
         error: null
 
@@ -666,7 +685,8 @@ module.exports = {
           userId: managerExist.id,
           pilotageServiceId: Number(id),
           signedAt: new Date(),
-          token: token 
+          token: token,
+          type : "MANAGER",
         }
       })
       return res.status(200).json({
@@ -788,7 +808,7 @@ module.exports = {
     try {
       const user = req.user;
       const { id } = req.params;
-      const { note, rate } = req.body;
+      const { note, rate , signatureImage} = req.body;
       const token = crypto.randomBytes(16).toString("hex");
       const service = await prisma.pilotageService.findUnique({
         where: { id: Number(id) },
@@ -818,6 +838,11 @@ module.exports = {
           message: "Invalid Service Status",
         });
       }
+      if(!signatureImage){
+        return res.status(400).json({
+          status :false, message : "Master signature cannot be empty"
+        })
+      }
       const updatedService = await prisma.pilotageService.update({
         where: { id: Number(id) },
         data: {
@@ -830,14 +855,23 @@ module.exports = {
         }, 
       });
 
-      const signDocument = await  prisma.docSignature.create({
-    data: {
-    userId: user.id,
-    pilotageServiceId: Number(id),
-    signedAt: new Date(),
-    token: token  // kalau kamu tambahkan field ini
-  },
-});
+      const pilotSignDocument = await  prisma.docSignature.create({
+          data: {
+          userId: user.id,
+          pilotageServiceId: Number(id),
+          signedAt: new Date(),
+          token: token  ,
+          type : "PILOT",
+      }});
+    const masterSignDocument = await prisma.docSignature.create({
+      data : {
+        pilotageServiceId : Number(id),
+        signedAt: new Date(),
+        type : "MASTER",
+        signatureImage : signatureImage,
+
+      }
+    })
       return res.status(200).json({
         status: false,
         message: "Success completing pilotage service",
