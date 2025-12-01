@@ -20,7 +20,7 @@ module.exports = {
     });
   }
   res.render("sign-valid", {
-    shipName: signature.service.shipDetails[0].shipName,
+    shipName: signature.service.shipDetails?.map(s => s.shipName).join(" / ") || "-",
     docNumber : signature.service.docNumber,
     userName: signature.user.name,
     userRole: signature.user.role,

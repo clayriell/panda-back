@@ -1,5 +1,5 @@
 const prisma = require("../config/db");
-const pilotageService = require("./pilotage-service");
+const crypto = require("crypto")
 
 module.exports = {
   //assist tug service
@@ -688,13 +688,19 @@ assistDemob: async (req, res) => {
     try {
     const user = req.user
     const id = Number(req.params.id)
+    const token = crypto.randomBytes(16).toString("hex");
 
     const assistTug = await prisma.assistTug.findUnique({
       where: { masterId: Number(user.id) },
     })
 
     const serviceExist = await prisma.tugService.findUnique({
-      where : { id : id}
+      where : { id : id},
+      include : {
+        pilotageService : {
+          select : {id : true}
+        }
+      }
     })
 
     if(!serviceExist){
@@ -743,12 +749,19 @@ assistDemob: async (req, res) => {
         }, 
         include : {tugService : true}
     })
+    const masterSignDocument = await  prisma.docSignature.create({
+          data: {
+          userId: user.id,
+          pilotageServiceId: serviceExist.pilotageService.id,
+          signedAt: new Date(),
+          token: token  ,
+          type : "TUG_MASTER",
+      }});
     
     const tugOnWork = await prisma.tugServiceDetail.findMany({
       where : {tugServiceId: id, status : {in : ["WAITING" , "ON_MOB" ,"ON_WORK", "ON_DEMOB"]}},
     })
 
-    
     if (tugOnWork.length === 0) {
   const updateTugService  = await prisma.tugService.update({
     where : {id : id},

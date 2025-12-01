@@ -2,8 +2,9 @@ const prisma = require("../config/db");
 const crypto = require("crypto");
 const QRCode = require("qrcode")
 const {generateDocumentNumber } = require('../utils/documentNumberGenerator');
-const company = require("./company");
-const { type } = require("os");
+const puppeteer = require("puppeteer");
+require("dotenv").config();
+const baseUrl = process.env.APP_URL;
 module.exports = {
 
   // PILOTAGE SERVICE ACTION
@@ -270,48 +271,52 @@ module.exports = {
       // ============================
       //   SIGNATURE CHECK + QR CODE
       // ============================
-      let pilotQR,managerQR , tugMasterQR = null;
+      let pilotQR,managerQR = null;
+      let tugMasterQRs = [];
+
       const pilotSignature = service.signatures?.find(
-  s => s.type === "PILOT"
-);
+  s => s.type === "PILOT");
       const managerSignature = service.signatures?.find(
-  s => s.type === "MANAGER"
-);
-      const tugMasterSignature = service.signatures?.find(
-  s => s.type === "TUG_MASTER"
-);
-const masterSignature = service.signatures?.find(
+  s => s.type === "MANAGER");
+      const tugMasterSignatures = service.signatures?.filter(
+  s => s.type === "TUG_MASTER") || [];
+      const masterSignature = service.signatures?.find(
   s => s.type === "MASTER"
 );
-
       if(managerSignature?.token){
-        const msUrl = `http://192.168.0.119:3000/api/validate/signature/${managerSignature.token}`
+        const msUrl = `${baseUrl}/api/validate/signature/${managerSignature.token}`
         managerQR = await QRCode.toDataURL(msUrl)
       }
       if (pilotSignature?.token) {
         // URL validasi signature
-        const psUrl = `http://192.168.0.119:3000/api/validate/signature/${pilotSignature.token}`;
+        const psUrl = `${baseUrl}/api/validate/signature/${pilotSignature.token}`;
         // generate QR
         pilotQR = await QRCode.toDataURL(psUrl);
       }
-      if (tugMasterSignature?.token) {
-        // URL validasi signature
-        const psUrl = `http://192.168.0.119:3000/api/validate/signature/${tugMasterSignature.token}`;
-        // generate QR
-        tugMasterQR = await QRCode.toDataURL(psUrl);
-      }
+
+      tugMasterQRs = await Promise.all(
+    tugMasterSignatures
+    .filter(sig => sig.token)     // hanya ambil yang valid
+    .map(async sig => {
+      const tmUrl = `${baseUrl}/api/validate/signature/${sig.token}`;
+      return await QRCode.toDataURL(tmUrl);
+    })
+);
+
   let logo = "/img/default-logo.jpg";
 
   if (service.companyId === 1) {
     logo = "/img/logo-company1.png";
   } else if (service.companyId === 2) {
     logo = "/img/logo-company2.png";
-  }
+  } 
+
+      
       return res.render("form-jasa", {
         service,
         pilotQR,
         managerQR,
-        tugMasterQR,
+        tugMasterQRs,
         masterSignature,
         logo,
         error: null

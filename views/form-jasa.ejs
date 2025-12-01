@@ -220,6 +220,17 @@
   page-break-before: always;
 }
 
+.qr-row {
+  display: flex;
+  gap: 30px;
+  margin-top: 10px;
+}
+
+.qr-placeholder img {
+  display: block;
+  margin: 0 auto;
+}
+
 
   @media print {
     body {
@@ -232,7 +243,9 @@
     }
   }
 </style>
-
+<head>
+  <title>Pilot & Tug Certificate</title>
+</head>
 <div class="page">
   <!-- Header -->
     <div class="header">
@@ -263,7 +276,11 @@
       <div class="column">
         <div class="info-row">
           <span class="info-label">Nama Kapal</span>
-          <span class="info-value">:  <%= service.shipDetails[0]?.shipName || '-' %></span>
+          <span class="info-value">:  
+            <%= service.shipDetails && service.shipDetails.length > 0
+              ? service.shipDetails.map(s => s.shipName).join(" / ")
+              : "-" %>
+          </span>
         </div>
         <div class="info-row" style="margin-left: 0px;">
           <em style="font-size: 8pt;">Vessel</em>
@@ -271,7 +288,14 @@
         
         <div class="info-row">
           <span class="info-label">Nama Nahkoda</span>
-          <span class="info-value">: <%= service.shipDetails[0]?.master || '-' %></span>
+          <span class="info-value">:<%= service.shipDetails && service.shipDetails.length > 0
+  ? service.shipDetails
+      .filter(s => s.master && s.master.trim() !== "")
+      .map(s => s.master)
+      .join(" / ")
+  : "-" %>
+
+</span>
         </div>
         <div class="info-row" style="margin-left: 0px;">
           <em style="font-size: 8pt;">Master Name</em>
@@ -279,7 +303,10 @@
         
         <div class="info-row">
           <span class="info-label">Bendera</span>
-          <span class="info-value">: <%= service.shipDetails[0]?.flag %></span>
+          <span class="info-value">: <%= service.shipDetails && service.shipDetails.length > 0
+  ? service.shipDetails.map(s => s.flag || "-").join(" / ")
+  : "-" %>
+</span> 
         </div>
         <div class="info-row" style="margin-left: 0px;">
           <span style="font-size: 8pt;">Flag</span>
@@ -296,7 +323,9 @@
         
         <div class="info-row">
           <span class="info-label">Isi Kotor</span>
-          <span class="info-value">: <%= service.shipDetails[0]?.grt %></span>
+          <span class="info-value">: <%= service.shipDetails && service.shipDetails.length > 0
+        ? service.shipDetails.map(s => s.grt || "-").join(" / ")
+        : "-" %></span>
         </div>
         <div class="info-row" style="margin-left: 0px;">
           <em style="font-size: 8pt;">GRT</em>
@@ -330,7 +359,10 @@
         
         <div class="info-row">
           <span class="info-label">Panjang</span>
-          <span class="info-value">: <%= service.shipDetails[0]?.loa || '' %> m</span>
+          <span class="info-value">: <%= service.shipDetails && service.shipDetails.length > 0
+  ? service.shipDetails.map(s => s.loa  || "-").join(" / ")
+  : "-" %>
+ m</span>
         </div>
         <div class="info-row" style="margin-left: 0px;">
           <em style="font-size: 8pt;">LOA</em>
@@ -456,8 +488,6 @@
   </tbody>
 </table>
 
-
-
     </div>
 
   <!-- QR Code Footer -->
@@ -525,6 +555,7 @@
 
     <div class="company-info">
       <strong>PT. MACCAHMA DHINA HARTIENDSPIN</strong><br>
+      <p>Pilotify - Ops Marine Solution</p>
     </div>
   </div>
   
@@ -545,7 +576,11 @@
       <div class="column">
         <div class="info-row">
           <span class="info-label">Nama Kapal</span>
-          <span class="info-value">:  <%= service.shipDetails[0]?.shipName || '-' %></span>
+          <span class="info-value">:  
+            <%= service.shipDetails && service.shipDetails.length > 0
+              ? service.shipDetails.map(s => s.shipName).join(" / ")
+              : "-" %>
+          </span>
         </div>
         <div class="info-row" style="margin-left: 0px;">
           <em style="font-size: 8pt;">Vessel</em>
@@ -553,7 +588,13 @@
         
         <div class="info-row">
           <span class="info-label">Nama Nahkoda</span>
-          <span class="info-value">: <%= service.shipDetails[0]?.master || '-' %></span>
+          <span class="info-value">: <%= service.shipDetails && service.shipDetails.length > 0
+  ? service.shipDetails
+      .filter(s => s.master && s.master.trim() !== "")
+      .map(s => s.master)
+      .join(" / ")
+  : "-" %>
+</span>
         </div>
         <div class="info-row" style="margin-left: 0px;">
           <em style="font-size: 8pt;">Master Name</em>
@@ -561,7 +602,10 @@
         
         <div class="info-row">
           <span class="info-label">Bendera</span>
-          <span class="info-value">: <%= service.shipDetails[0]?.flag %></span>
+          <span class="info-value">: <%= service.shipDetails && service.shipDetails.length > 0
+  ? service.shipDetails.map(s => s.flag || "-").join(" / ")
+  : "-" %>
+</span> 
         </div>
         <div class="info-row" style="margin-left: 0px;">
           <span style="font-size: 8pt;">Flag</span>
@@ -578,7 +622,9 @@
         
         <div class="info-row">
           <span class="info-label">Isi Kotor</span>
-          <span class="info-value">: <%= service.shipDetails[0]?.grt %></span>
+          <span class="info-value">: <%= service.shipDetails && service.shipDetails.length > 0
+        ? service.shipDetails.map(s => s.grt || "-").join(" / ")
+        : "-" %></span>
         </div>
         <div class="info-row" style="margin-left: 0px;">
           <em style="font-size: 8pt;">GRT</em>
@@ -612,7 +658,10 @@
         
         <div class="info-row">
           <span class="info-label">Panjang</span>
-          <span class="info-value">: <%= service.shipDetails[0]?.loa || '' %> m</span>
+          <span class="info-value">: <%= service.shipDetails && service.shipDetails.length > 0
+  ? service.shipDetails.map(s => s.loa  || "-").join(" / ")
+  : "-" %>
+ m</span>
         </div>
         <div class="info-row" style="margin-left: 0px;">
           <em style="font-size: 8pt;">LOA</em>
@@ -710,12 +759,16 @@
     <div class="qr-box">
       <div class="qr-label">NAKHODA KAPAL TUNDA</div>
       <span>TUG MASTER</span>
-      <div class="qr-placeholder"><% if (tugMasterQR) { %>
-        <img src="<%= tugMasterQR %>" width="100">
-      <% } else { %>
-        <p>unsigned</p>
-      <% } %></div>
-          </div>
+        <div class="flex gap-4">
+    <% if (tugMasterQRs && tugMasterQRs.length > 0) { %>
+    <% tugMasterQRs.forEach(qr => { %>
+      <img src="<%= qr %>" width="100">
+    <% }) %>
+    <% } else { %>
+    <p>unsigned</p>
+    <% } %>
+      </div>
+      </div>
     
     <div class="qr-box">
       <div class="qr-label"">NAKHODA / AGEN</div>

@@ -36,7 +36,7 @@ module.exports = {
           username: user.username,
         },
         JWT_SECRET,
-        { expiresIn: "1d" }
+        { expiresIn: "5h" }
       );
 
       res.json({
