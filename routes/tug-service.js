@@ -29,7 +29,7 @@ router.get("/requested", authenticate, getServiceRequested);
 router.get("/:id/detail", authenticate, getDetail);
 router.get("/company", authenticate, getByCompany);
 router.get("/:id/submit", authenticate, submit);
-router.post("/", authenticate, mustRole("ADMIN"), create);
+router.post("/", authenticate, mustRole("ADMIN"), create); 
 
 //Tug Service Detail action
 router.put("/:id/approve", authenticate, mustRole("ADMIN"), approve);

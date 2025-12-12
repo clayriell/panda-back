@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const QRCode = require("qrcode");
 const { generateDocumentNumber } = require("../utils/documentNumberGenerator");
 const puppeteer = require("puppeteer");
+const e = require("express");
 require("dotenv").config();
 const baseUrl = process.env.APP_URL;
 module.exports = {
@@ -76,6 +77,11 @@ module.exports = {
           shipDetails: true,
           tugServices: {
             include: { tugDetails: { include: { assistTug: true } } },
+          },
+          pilot: {
+            select: {
+              name: true,
+            },
           },
         },
       });

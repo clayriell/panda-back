@@ -1,5 +1,5 @@
 const prisma = require("../config/db");
-const crypto = require("crypto")
+const crypto = require("crypto");
 
 module.exports = {
   //assist tug service
@@ -87,57 +87,66 @@ module.exports = {
     }
   },
   getServiceByTugMaster: async (req, res) => {
-  try {
-    const user = req.user;
+    try {
+      const user = req.user;
 
-    const tugServices = await prisma.tugServiceDetail.findMany({
-      where: {
-        status: {notIn : ["COMPLETED"] },
-        assistTug: {
-          masterId: Number(user.id),
-        },
-        tugService : {status : {notIn : ["REQUESTED" , "COMPLETED", "REJECTED" , "CANCELED"]}},
-      },
-      select: { activity  :true,
-        tugService: {
-          select: {
-            id: true, idJasa : true, status: true,
-            pilotageService: { 
-              select : { 
-                idJasa : true , 
-                lastPort : true, 
-                nextPort : true, 
-                startDate : true, 
-                startTime : true,
-                shipDetails : {select : {
-                  shipName : true,
-                  grt : true , 
-                  loa : true,
-                }},
-                terminalStart : {select : {name : true , code : true}}, 
-                terminalEnd :{select : {name : true, code : true}},
-                agency: {select : {name : true}},
-              }
+      const tugServices = await prisma.tugServiceDetail.findMany({
+        where: {
+          status: { notIn: ["COMPLETED"] },
+          assistTug: {
+            masterId: Number(user.id),
+          },
+          tugService: {
+            status: {
+              notIn: ["REQUESTED", "COMPLETED", "REJECTED", "CANCELED"],
             },
           },
         },
-        assistTug: true, // kalau mau sekalian ambil data assistTug
-      }
-    });
+        select: {
+          activity: true,
+          tugService: {
+            select: {
+              id: true,
+              idJasa: true,
+              status: true,
+              pilotageService: {
+                select: {
+                  idJasa: true,
+                  lastPort: true,
+                  nextPort: true,
+                  startDate: true,
+                  startTime: true,
+                  shipDetails: {
+                    select: {
+                      shipName: true,
+                      grt: true,
+                      loa: true,
+                    },
+                  },
+                  terminalStart: { select: { name: true, code: true } },
+                  terminalEnd: { select: { name: true, code: true } },
+                  agency: { select: { name: true } },
+                },
+              },
+            },
+          },
+          assistTug: true, // kalau mau sekalian ambil data assistTug
+        },
+      });
 
-    return res.status(200).json({
-      status: true,
-      message: "Success get all tug service",
-      data: tugServices,
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({
-      status: false,
-      message: "Internal server error",
-    });
-  }
-},
+      return res.status(200).json({
+        status: true,
+        message: "Success get all tug service",
+        data: tugServices,
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        status: false,
+        message: "Internal server error",
+      });
+    }
+  },
   getDetail: async (req, res) => {
     try {
       const user = req.user;
@@ -146,18 +155,27 @@ module.exports = {
       const service = await prisma.tugService.findUnique({
         where: { id: Number(id) },
         include: {
-          pilotageService: { 
-            include : { 
-              shipDetails : true, 
+          pilotageService: {
+            include: {
+              shipDetails: true,
               terminalStart: true,
-              terminalEnd : true, 
-              agency:  true,
+              terminalEnd: true,
+              agency: true,
               company: true,
-              pilot: {select : {name : true}}
-            }
-
+              pilot: { select: { name: true } },
+            },
           },
-          tugDetails: {select : {assistTug : true , mobTime : true, connectTime : true, disconnectTime: true , demobTime:true, activity: true, status:true}},
+          tugDetails: {
+            select: {
+              assistTug: true,
+              mobTime: true,
+              connectTime: true,
+              disconnectTime: true,
+              demobTime: true,
+              activity: true,
+              status: true,
+            },
+          },
         },
       });
 
@@ -167,7 +185,7 @@ module.exports = {
           message: "Tug service not found.",
         });
       }
-      if (user.companyId !== service.pilotageService.companyId  ) {
+      if (user.companyId !== service.pilotageService.companyId) {
         return res.status(403).json({
           status: false,
           message: "Forbidden user access, check your company",
@@ -307,122 +325,137 @@ module.exports = {
         .json({ status: false, message: "Internal server error" });
     }
   },
-  //CREATE TUG SERVICE 
+  //CREATE TUG SERVICE
   create: async (req, res) => {
-  try {
-    const { idJasa, pilotageServiceId, tugDetails } = req.body
-
-    // cek pilotage service
-    const pilotageServiceExist = await prisma.pilotageService.findUnique({
-      where: { id: Number(pilotageServiceId) },
-      include: { shipDetails: true },
-    })
-
-    if (!pilotageServiceExist) {
-      return res.status(400).json({
-        status: false,
-        message: "Pilotage service not found.",
-      })
-    }
-
-    if (!tugDetails || tugDetails.length < 1) {
-      return res.status(400).json({
-        status: false,
-        message: "Assist Tug required to create tug service.",
-      })
-    }
-
-    const newTugService = await prisma.tugService.create({
-      data: {
-        pilotageServiceId: Number(pilotageServiceId),
-        status: "REQUESTED",
-        idJasa,
-        tugDetails: {
-          create: tugDetails.map((detail) => ({
-            assistTugId: detail.assistTugId,
-            status: "WAITING",
-            activity: detail.activity,
-          })),
-        },
-      },
-      include: {
-        pilotageService: {
-          select: {
-            agency: { select: { name: true } },
-            shipDetails: true,
-            terminalStart: { select: { name: true } },
-            terminalEnd: { select: { name: true } },
-          },
-        },
-      },
-    })
-
-    return res.status(201).json({
-      status: true,
-      message: "Success create tug service",
-      data: newTugService,
-    })
-  } catch (error) {
-    return res.status(400).json({
-      status: false,
-      message: error.message || "Failed to create TugService",
-    })
-  }
-},
-  //APPROVE TUG SERVICE
-   approve : async  (req , res ) => {
-    const user = req.user 
-    const {id} = req.params
-
     try {
-      const serviceExist  = await prisma.tugService.findUnique({
-        where : {id : Number(id)} , 
-        include : { pilotageService :  {select : {company: true}}
-        }
-      })
+      const { idJasa, pilotageServiceId, tugDetails } = req.body;
 
-      if (!serviceExist){
-        return res.statu(400).json({
-          status : false, message :"Tug service not found"
-        })
-      }
-        if (user.companyId !== serviceExist.pilotageService.company.id   ) {
-          return res.status(403).json({
-            status: false,
-            message: "Forbidden access user, please check your company"
-          });   
-        }
+      // cek pilotage service
+      const pilotageServiceExist = await prisma.pilotageService.findUnique({
+        where: { id: Number(pilotageServiceId) },
+        include: { shipDetails: true },
+      });
 
-      if (serviceExist.status === "APPROVED") {
-        return res.status(409).json({
+      if (!pilotageServiceExist) {
+        return res.status(400).json({
           status: false,
-          message: "Pilotage Service already approved.",
+          message: "Pilotage service not found.",
         });
       }
 
-      if (serviceExist.status !== "REQUESTED") {
-        return res
-          .status(400)
-          .json({ status: false, message: "Invalid Pilotage Service status." });
+      if (!tugDetails || tugDetails.length < 1) {
+        return res.status(400).json({
+          status: false,
+          message: "Assist Tug required to create tug service.",
+        });
       }
 
-      const updateService = await prisma.tugService.update({
-        where : {id : Number(id)},
+      const newTugService = await prisma.tugService.create({
         data: {
-          status : "APPROVED",
-          createdBy  :Number(user.id)
+          pilotageServiceId: Number(pilotageServiceId),
+          status: "REQUESTED",
+          idJasa,
+          tugDetails: {
+            create: tugDetails.map((detail) => ({
+              assistTugId: detail.assistTugId,
+              status: "WAITING",
+              activity: detail.activity,
+            })),
+          },
         },
-         include : {
-          pilotageService: true, 
-           tugDetails : true
-        }
-      })
+        include: {
+          pilotageService: {
+            select: {
+              agency: { select: { name: true } },
+              shipDetails: true,
+              terminalStart: { select: { name: true } },
+              terminalEnd: { select: { name: true } },
+            },
+          },
+        },
+      });
 
+      return res.status(201).json({
+        status: true,
+        message: "Success create tug service",
+        data: newTugService,
+      });
+    } catch (error) {
+      return res.status(400).json({
+        status: false,
+        message: error.message || "Failed to create TugService",
+      });
+    }
+  },
+  //APPROVE TUG SERVICE
+  approve: async (req, res) => {
+    const user = req.user;
+    const { id } = req.params;
+
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        // 1. Cek apakah service ada
+        const serviceExist = await tx.tugService.findUnique({
+          where: { id: Number(id) },
+          include: { pilotageService: { select: { company: true } } },
+        });
+
+        if (!serviceExist) {
+          throw { code: 400, message: "Tug service not found" };
+        }
+
+        // 2. Cek apakah user satu company
+        if (user.companyId !== serviceExist.pilotageService.company.id) {
+          throw {
+            code: 403,
+            message: "Forbidden access user, check your company",
+          };
+        }
+
+        // 3. Cek duplikasi approve
+        if (serviceExist.status === "APPROVED") {
+          throw { code: 409, message: "Tug Service already approved." };
+        }
+
+        // 4. Validasi status
+        if (serviceExist.status !== "REQUESTED") {
+          throw { code: 400, message: "Invalid Tug Service status." };
+        }
+
+        // 5. Update status
+        const updateService = await tx.tugService.update({
+          where: { id: Number(id) },
+          data: {
+            status: "APPROVED",
+            createdBy: Number(user.id),
+          },
+          include: {
+            pilotageService: true,
+            tugDetails: true,
+          },
+        });
+
+        return updateService;
+      });
+
+      // Jika transaksi sukses
       return res.status(200).json({
-        status : true , message : "Tug service approved successfully" , data : updateService
-      })
+        status: true,
+        message: "Tug service approved successfully",
+        data: result,
+      });
     } catch (error) {
       console.error("Error approving service:", error);
+
+      // Handle error custom dari throw { code, message }
+      if (error.code) {
+        return res.status(error.code).json({
+          status: false,
+          message: error.message,
+        });
+      }
+
+      // Error Prisma / error lain
       return res.status(500).json({
         status: false,
         message: "Internal server error",
@@ -435,357 +468,409 @@ module.exports = {
   //CANCEL TUG SERVICE
   //SUBMIT TUG SERVICE (NOT FIXED YET)
   submit: async (req, res) => {
-  try {
-    const user = req.user
-    const { id } = req.params
-    const tugServiceId = Number(id)
+    try {
+      const user = req.user;
+      const { id } = req.params;
+      const tugServiceId = Number(id);
 
-    const tugService = await prisma.tugService.findUnique({
-      where: { id: tugServiceId },
-    })
+      const result = await prisma.$transaction(async (tx) => {
+        // 1. Cek tug service
+        const tugService = await tx.tugService.findUnique({
+          where: { id: tugServiceId },
+        });
 
-    if (!tugService) {
-      return res.status(404).json({
+        if (!tugService) {
+          throw { code: 404, message: "Tug service not found" };
+        }
+
+        // 2. Pastikan sudah completed
+        if (tugService.status !== "COMPLETED") {
+          throw {
+            code: 400,
+            message: "Tug service must be COMPLETED before submitting.",
+          };
+        }
+
+        // 3. Cek apakah ada tug yang belum selesai
+        const tugOnWork = await tx.tugServiceDetail.findMany({
+          where: {
+            tugServiceId,
+            status: { in: ["WAITING", "ON_MOB", "ON_WORK", "ON_DEMOB"] },
+          },
+        });
+
+        if (tugOnWork.length > 0) {
+          throw {
+            code: 400,
+            message: "Assist tug haven't finished the work.",
+          };
+        }
+
+        // 4. Update status tug service
+        const updatedTugService = await tx.tugService.update({
+          where: { id: tugServiceId },
+          data: {
+            status: "SUBMITTED",
+            submitTime: new Date(),
+            submittedBy: Number(user.id),
+          },
+        });
+
+        return updatedTugService;
+      });
+
+      // Success
+      return res.status(200).json({
+        status: true,
+        message: "Tug service submitted successfully",
+        data: result,
+      });
+    } catch (error) {
+      console.error("Error submitting tug service:", error);
+
+      if (error.code) {
+        return res.status(error.code).json({
+          status: false,
+          message: error.message,
+        });
+      }
+
+      return res.status(500).json({
         status: false,
-        message: "Tug service not found",
-      })
+        message: error.message || "Internal server error",
+      });
     }
-
-    if (tugService.status !== "COMPLETED") {
-      return res.status(400).json({
-        status: false,
-        message: "Tug service must be COMPLETED before submitting."
-,
-      })
-    }
-
-    const tugOnWork = await prisma.tugServiceDetail.findMany({
-      where: {
-        tugServiceId,
-        status: { in: ["WAITING", "ON_MOB", "ON_WORK", "ON_DEMOB"] },
-      },
-    })
-
-    if (tugOnWork.length > 0) {
-      return res.status(400).json({
-        status: false,
-        message: "Assist tug haven't finished the work.",
-      })
-    }
-
-    // update status tug service
-    const updatedTugService = await prisma.tugService.update({
-      where: { id: tugServiceId },
-      data: {
-        status: "SUBMITTED",
-        submitTime: new Date(),
-        submittedBy: Number(user.id),
-      },
-    })
-
-    return res.status(200).json({
-      status: true,
-      message: "Tug service submitted successfully",
-      data: updatedTugService,
-    })
-  } catch (error) {
-    console.error("Error submitting tug service:", error)
-    return res.status(500).json({
-  status: false,
-  message: error.message || "Internal server error",
-})
-
-  }
-},
-  
+  },
 
   // ASSIST TUG DETAIL ACTION
-assistMob: async (req, res) => {
+  assistMob: async (req, res) => {
     try {
-    // const jakartaTime = new Date().toLocaleString("sv-SE", { timeZone: "Asia/Jakarta" })
-    const user = req.user
-    const id = Number(req.params.id) // tugServiceId
-
-    // cari assistTug milik user (role: TUG_MASTER)
-    const assistTug = await prisma.assistTug.findUnique({
-      where: { masterId: Number(user.id) },
-    })
-
-    if (!assistTug) {
-      return res.status(404).json({
-        status: false,
-        message: "AssistTug not found for this user",
-      })
-    }
-
-    // cek service detail
-    const assistServiceExist = await prisma.tugServiceDetail.findUnique({
-      where: {
-        tugServiceId_assistTugId: {
-          tugServiceId: id,
-          assistTugId: assistTug.id, 
-        },
-      },
-    })
-
-    if (!assistServiceExist) {
-      return res.status(404).json({
-        status: false,
-        message: "Tug Service not found",
-      })
-    }
-    if(assistTug.masterId !== Number(user.id)){
-      return res.status(403).json({
-        status :false, message : "Forbidden access user."
-      })
-    }
-
-
-    // update status tug service
-    await prisma.tugService.update({
-      where: { id },
-      data: { status: "IN_PROCESS" },
-    })
-
-    // update mob time tug service detail
-    const updateServiceDetail = await prisma.tugServiceDetail.update({
-      where: {
-        tugServiceId_assistTugId: {
-          tugServiceId: id,
-          assistTugId: assistTug.id,
-        },
-      },
-      data: { mobTime: new Date()  , status  : "ON_MOB"},
-      include: { tugService: true },
-    })
-
-    return res.status(200).json({
-      status: true,
-      message: "Assist tug mob success",
-      data: updateServiceDetail,
-    })
-  } catch (error) {
-    console.error("Error assistMob:", error)
-    return res.status(500).json({
-      status: false,
-      message: "Internal server error",
-    })
-  }
-},
-assistConnect: async (req, res) => {
-    try {
-    const user = req.user
-    const id = Number(req.params.id) 
-
-    const assistTug = await prisma.assistTug.findUnique({
-      where: { masterId: user.id },
-    })
-
-    if (!assistTug) {
-      return res.status(404).json({
-        status: false,
-        message: "AssistTug not found for this user",
-      })
-    }
-
-    const assistServiceExist = await prisma.tugServiceDetail.findUnique({
-      where: {
-        tugServiceId_assistTugId: {
-          tugServiceId: id,
-          assistTugId: assistTug.id,
-        },
-      },
-    })
-
-    if (!assistServiceExist) {
-      return res.status(404).json({
-        status: false,
-        message: "Tug Service not found",
-      })
-    }
-
-    // update mob time tug service detail
-    const updateServiceDetail = await prisma.tugServiceDetail.update({
-      where: {
-        tugServiceId_assistTugId: {
-          tugServiceId: id,
-          assistTugId: assistTug.id,
-        },
-      },
-      data: { connectTime: new Date() , status : "ON_WORK"},
-      include: { tugService: true },
-    })
-
-    return res.status(200).json({
-      status: true,
-      message: "Assist Tug connect success",
-      data: updateServiceDetail,
-    })
-  } catch (error) {
-    console.error("Error connect assist:", error)
-    return res.status(500).json({
-      status: false,
-      message: "Internal server error",
-    })
-  }
-},
-assistDisconnect: async (req, res) => {
-    try {
-    const user = req.user
-    const id = Number(req.params.id) 
-
-    const assistTug = await prisma.assistTug.findUnique({
-      where: { masterId: user.id },
-    })
-
-    if (!assistTug) {
-      return res.status(404).json({
-        status: false,
-        message: "AssistTug not found for this user",
-      })
-    }
-
-    const assistServiceExist = await prisma.tugServiceDetail.findUnique({
-      where: {
-        tugServiceId_assistTugId: {
-          tugServiceId: id,
-          assistTugId: assistTug.id,
-        },
-      },
-    })
-
-    if (!assistServiceExist) {
-      return res.status(404).json({
-        status: false,
-        message: "Tug Service not found",
-      })
-    }
-    const updateServiceDetail = await prisma.tugServiceDetail.update({
-      where: {
-        tugServiceId_assistTugId: {
-          tugServiceId: id,
-          assistTugId: assistTug.id,
-        },
-      },
-      data: { disconnectTime: new Date(), status : "ON_DEMOB" },
-      include: { tugService: true },
-    })
-
-    return res.status(200).json({
-      status: true,
-      message: "Finish disconnect success",
-      data: updateServiceDetail,
-    })
-  } catch (error) {
-    console.error("Error disconnect assist tug:", error)
-    return res.status(500).json({
-      status: false,
-      message: "Internal server error",
-    })
-  }
-},
-assistDemob: async (req, res) => {
-    try {
-    const user = req.user
-    const id = Number(req.params.id)
-    const token = crypto.randomBytes(16).toString("hex");
-
-    const assistTug = await prisma.assistTug.findUnique({
-      where: { masterId: Number(user.id) },
-    })
-
-    const serviceExist = await prisma.tugService.findUnique({
-      where : { id : id},
-      include : {
-        pilotageService : {
-          select : {id : true}
-        }
+      function nowUtcPlus7() {
+        const now = new Date();
+        return new Date(now.getTime() + 7 * 60 * 60 * 1000);
       }
-    })
 
-    if(!serviceExist){
-      return res.status(404).json({
-        status : false , message : "Tug service not found" 
-      })
-    }
-    if (!assistTug) {
-      return res.status(404).json({
-        status: false,
-        message: "AssistTug not found for this user",
-      })
-    }
+      const user = req.user;
+      const id = Number(req.params.id); // tugServiceId
 
-    const assistServiceExist = await prisma.tugServiceDetail.findUnique({
-      where: {
-        tugServiceId_assistTugId: {
-          tugServiceId: id,
-          assistTugId: assistTug.id, 
-        },
-      },
-    })
+      const result = await prisma.$transaction(async (tx) => {
+        // 1. Cari assistTug milik user
+        const assistTug = await tx.assistTug.findUnique({
+          where: { masterId: Number(user.id) },
+        });
 
-    if (!assistServiceExist) {
-      return res.status(404).json({
-        status: false,
-        message: "Tug Service not found",
-      })
-    }
-    if(assistTug.masterId !== Number(user.id)){
-      return res.status(403).json({
-        status :false, message : "Forbidden access user."
-      })
-    }
+        if (!assistTug) {
+          throw { code: 404, message: "AssistTug not found for this user" };
+        }
 
-    const updateTugServiceDetail = await prisma.tugServiceDetail.update({
-      where: {
-        tugServiceId_assistTugId: {
-          tugServiceId: id,
-          assistTugId: assistTug.id, 
-        },
-      },
-        data : {
-          demobTime : new Date(),
-          status : "COMPLETED"
-        }, 
-        include : {tugService : true}
-    })
-    const masterSignDocument = await  prisma.docSignature.create({
+        // 2. Cek apakah tug service detail-nya ada
+        const assistServiceExist = await tx.tugServiceDetail.findUnique({
+          where: {
+            tugServiceId_assistTugId: {
+              tugServiceId: id,
+              assistTugId: assistTug.id,
+            },
+          },
+        });
+
+        if (!assistServiceExist) {
+          throw { code: 404, message: "Tug Service not found" };
+        }
+
+        // 3. Validasi user
+        if (assistTug.masterId !== Number(user.id)) {
+          throw { code: 403, message: "Forbidden access user." };
+        }
+
+        // 4. Update status tug service → IN_PROCESS
+        await tx.tugService.update({
+          where: { id },
+          data: { status: "IN_PROCESS" },
+        });
+
+        // 5. Update MOB time & status tug detail
+        const updateServiceDetail = await tx.tugServiceDetail.update({
+          where: {
+            tugServiceId_assistTugId: {
+              tugServiceId: id,
+              assistTugId: assistTug.id,
+            },
+          },
           data: {
-          userId: user.id,
-          pilotageServiceId: serviceExist.pilotageService.id,
-          signedAt: new Date(),
-          token: token  ,
-          type : "TUG_MASTER",
-      }});
-    
-    const tugOnWork = await prisma.tugServiceDetail.findMany({
-      where : {tugServiceId: id, status : {in : ["WAITING" , "ON_MOB" ,"ON_WORK", "ON_DEMOB"]}},
-    })
+            mobTime: nowUtcPlus7(),
+            status: "ON_MOB",
+          },
+          include: { tugService: true },
+        });
 
-    if (tugOnWork.length === 0) {
-  const updateTugService  = await prisma.tugService.update({
-    where : {id : id},
-    data : { status : "COMPLETED" },
-    include : {tugDetails : true}
-  })
-  return res.status(200).json({
-    status : true , 
-    message : "Success completing assist tug service." , 
-    data : updateTugService
-  })
-}
+        return updateServiceDetail;
+      });
 
-return res.status(200).json({
-  status : true , 
-  message : "Success completing assist tug detail." , 
-  data : updateTugServiceDetail
-})
-  } catch (error) {
-    console.error("Error Assist demob:", error)
-    return res.status(500).json({
-      status: false,
-      message: "Internal server error",
-    })
-  }
-},
+      // SUCCESS
+      return res.status(200).json({
+        status: true,
+        message: "Assist tug mob success",
+        data: result,
+      });
+    } catch (error) {
+      console.error("Error assistMob:", error);
+
+      if (error.code) {
+        return res.status(error.code).json({
+          status: false,
+          message: error.message,
+        });
+      }
+
+      return res.status(500).json({
+        status: false,
+        message: error.message || "Internal server error",
+      });
+    }
+  },
+
+  assistConnect: async (req, res) => {
+    try {
+      function nowUtcPlus7() {
+        const now = new Date();
+        return new Date(now.getTime() + 7 * 60 * 60 * 1000);
+      }
+
+      const user = req.user;
+      const id = Number(req.params.id);
+
+      const result = await prisma.$transaction(async (tx) => {
+        const assistTug = await tx.assistTug.findUnique({
+          where: { masterId: user.id },
+        });
+
+        if (!assistTug) {
+          throw { code: 404, message: "AssistTug not found for this user" };
+        }
+
+        const assistServiceExist = await tx.tugServiceDetail.findUnique({
+          where: {
+            tugServiceId_assistTugId: {
+              tugServiceId: id,
+              assistTugId: assistTug.id,
+            },
+          },
+        });
+
+        if (!assistServiceExist) {
+          throw { code: 404, message: "Tug Service not found" };
+        }
+
+        const updated = await tx.tugServiceDetail.update({
+          where: {
+            tugServiceId_assistTugId: {
+              tugServiceId: id,
+              assistTugId: assistTug.id,
+            },
+          },
+          data: {
+            connectTime: nowUtcPlus7(),
+            status: "ON_WORK",
+          },
+          include: { tugService: true },
+        });
+
+        return updated;
+      });
+
+      return res.status(200).json({
+        status: true,
+        message: "Assist Tug connect success",
+        data: result,
+      });
+    } catch (error) {
+      console.error("Error connect assist:", error);
+
+      return res.status(error.code || 500).json({
+        status: false,
+        message: error.message || "Internal server error",
+      });
+    }
+  },
+
+  assistDisconnect: async (req, res) => {
+    try {
+      function nowUtcPlus7() {
+        const now = new Date();
+        return new Date(now.getTime() + 7 * 60 * 60 * 1000);
+      }
+
+      const user = req.user;
+      const id = Number(req.params.id);
+
+      const result = await prisma.$transaction(async (tx) => {
+        const assistTug = await tx.assistTug.findUnique({
+          where: { masterId: user.id },
+        });
+
+        if (!assistTug) {
+          throw { code: 404, message: "AssistTug not found for this user" };
+        }
+
+        const assistServiceExist = await tx.tugServiceDetail.findUnique({
+          where: {
+            tugServiceId_assistTugId: {
+              tugServiceId: id,
+              assistTugId: assistTug.id,
+            },
+          },
+        });
+
+        if (!assistServiceExist) {
+          throw { code: 404, message: "Tug Service not found" };
+        }
+
+        const updated = await tx.tugServiceDetail.update({
+          where: {
+            tugServiceId_assistTugId: {
+              tugServiceId: id,
+              assistTugId: assistTug.id,
+            },
+          },
+          data: {
+            disconnectTime: nowUtcPlus7(),
+            status: "ON_DEMOB",
+          },
+          include: { tugService: true },
+        });
+
+        return updated;
+      });
+
+      return res.status(200).json({
+        status: true,
+        message: "Finish disconnect success",
+        data: result,
+      });
+    } catch (error) {
+      console.error("Error disconnect assist tug:", error);
+
+      return res.status(error.code || 500).json({
+        status: false,
+        message: error.message || "Internal server error",
+      });
+    }
+  },
+
+  assistDemob: async (req, res) => {
+    try {
+      function nowUtcPlus7() {
+        const now = new Date();
+        return new Date(now.getTime() + 7 * 60 * 60 * 1000);
+      }
+
+      const user = req.user;
+      const id = Number(req.params.id);
+      const token = crypto.randomBytes(16).toString("hex");
+
+      const result = await prisma.$transaction(async (tx) => {
+        const assistTug = await tx.assistTug.findUnique({
+          where: { masterId: Number(user.id) },
+        });
+
+        if (!assistTug) {
+          throw { code: 404, message: "AssistTug not found for this user" };
+        }
+
+        const serviceExist = await tx.tugService.findUnique({
+          where: { id },
+          include: { pilotageService: { select: { id: true } } },
+        });
+
+        if (!serviceExist) {
+          throw { code: 404, message: "Tug service not found" };
+        }
+
+        const assistServiceExist = await tx.tugServiceDetail.findUnique({
+          where: {
+            tugServiceId_assistTugId: {
+              tugServiceId: id,
+              assistTugId: assistTug.id,
+            },
+          },
+        });
+
+        if (!assistServiceExist) {
+          throw { code: 404, message: "Tug Service not found" };
+        }
+
+        if (assistTug.masterId !== Number(user.id)) {
+          throw { code: 403, message: "Forbidden access user." };
+        }
+
+        // 1. Update detail to COMPLETED
+        const updatedDetail = await tx.tugServiceDetail.update({
+          where: {
+            tugServiceId_assistTugId: {
+              tugServiceId: id,
+              assistTugId: assistTug.id,
+            },
+          },
+          data: {
+            demobTime: nowUtcPlus7(),
+            status: "COMPLETED",
+          },
+          include: { tugService: true },
+        });
+
+        // 2. Create sign document
+        await tx.docSignature.create({
+          data: {
+            userId: user.id,
+            pilotageServiceId: serviceExist.pilotageService.id,
+            signedAt: new Date(),
+            token,
+            type: "TUG_MASTER",
+          },
+        });
+
+        // 3. Check apakah semua tug sudah selesai
+        const tugRemaining = await tx.tugServiceDetail.count({
+          where: {
+            tugServiceId: id,
+            status: { in: ["WAITING", "ON_MOB", "ON_WORK", "ON_DEMOB"] },
+          },
+        });
+
+        // 4. Bila semua tug selesai → update tug service
+        if (tugRemaining === 0) {
+          const finalService = await tx.tugService.update({
+            where: { id },
+            data: { status: "COMPLETED" },
+            include: { tugDetails: true },
+          });
+
+          return { finalService, detail: updatedDetail, completed: true };
+        }
+
+        return { detail: updatedDetail, completed: false };
+      });
+
+      if (result.completed) {
+        return res.status(200).json({
+          status: true,
+          message: "Success completing assist tug service.",
+          data: result.finalService,
+        });
+      }
+
+      return res.status(200).json({
+        status: true,
+        message: "Success completing assist tug detail.",
+        data: result.detail,
+      });
+    } catch (error) {
+      console.error("Error Assist demob:", error);
+
+      return res.status(error.code || 500).json({
+        status: false,
+        message: error.message || "Internal server error",
+      });
+    }
+  },
 };
