@@ -27,7 +27,7 @@ model AssistTug {
   company   Company?  @relation(fields: [companyId], references: [id])
   tugMaster  User?  @relation(fields: [masterId], references: [id])
   tugDetails TugServiceDetail[]
-  
+  tugCurrentStatus     TugCurrentStatus?  
 }
 
 model Company {
@@ -145,6 +145,7 @@ model User {
   createdTugServices   TugService[] @relation("TugServiceCreatedBy")
   pilotageServices PilotageService[]
   signatures     DocSignature[]
+  pilotCurrentStatus   PilotCurrentStatus?
 }
 
 model ServiceLog {
@@ -181,6 +182,25 @@ model DocumentCounter {
   @@unique([companyCode,year,month])
 }
 
+model PilotCurrentStatus {
+  userId             Int      @id
+  pilotageServiceId  Int?
+  status             CurrentPilotStatus
+  startTime          DateTime?
+  updatedAt          DateTime @updatedAt
+
+  user               User     @relation(fields: [userId], references: [id])
+}
+
+model TugCurrentStatus {
+  assistTugId        Int      @id
+  pilotageServiceId  Int?
+  status             CurrentTugStatus
+  startTime          DateTime?
+  updatedAt          DateTime @updatedAt
+
+  assistTug          AssistTug @relation(fields: [assistTugId], references: [id])
+}
 
 enum Area {
   TANJUNG_UNCANG
@@ -235,4 +255,16 @@ enum SignType{
   PILOT
   TUG_MASTER
   MASTER
+}
+
+enum CurrentPilotStatus {
+  STAND_BY
+  WORKING
+}
+
+enum CurrentTugStatus {
+  STAND_BY
+  ON_MOB
+  WORKING
+  ON_DEMOB
 }

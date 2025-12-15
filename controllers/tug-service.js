@@ -96,7 +96,7 @@ module.exports = {
           assistTug: {
             masterId: Number(user.id),
           },
-          tugService: {
+          tugService: { 
             status: {
               notIn: ["REQUESTED", "COMPLETED", "REJECTED", "CANCELED"],
             },
@@ -121,16 +121,18 @@ module.exports = {
                       shipName: true,
                       grt: true,
                       loa: true,
+                      master: true,
                     },
                   },
                   terminalStart: { select: { name: true, code: true } },
                   terminalEnd: { select: { name: true, code: true } },
                   agency: { select: { name: true } },
+                  pilot: { select: { name: true } },
                 },
               },
             },
+            // assistTug: true, // kalau mau sekalian ambil data assistTug
           },
-          assistTug: true, // kalau mau sekalian ambil data assistTug
         },
       });
 
