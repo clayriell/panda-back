@@ -5,6 +5,11 @@ const { mustRole } = require("../middleware/role");
 
 const router = express.Router();
 
-router.get("/", authenticate, mustRole("SYS_ADMIN"), getAll);
+router.get(
+  "/",
+  authenticate,
+  mustRole("SYS_ADMIN", "ADMIN", "MANAGER"),
+  getAll
+);
 
 module.exports = router;

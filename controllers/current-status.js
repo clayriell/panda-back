@@ -3,8 +3,19 @@ const prisma = require("../config/db");
 module.exports = {
   getAll: async (req, res) => {
     try {
+      const user = req.user;
+
+      const serviceCompanyFilter =
+        user.role !== "SYS_ADMIN"
+          ? { user: { companyId: user.companyId } }
+          : {};
+      const serviceCompanyFilterTug =
+        user.role !== "SYS_ADMIN"
+          ? { assistTug: { companyId: user.companyId } }
+          : {};
       const [pilots, tugs] = await Promise.all([
         prisma.pilotCurrentStatus.findMany({
+          where: serviceCompanyFilter,
           include: {
             user: {
               select: {
@@ -28,7 +39,9 @@ module.exports = {
             },
           },
         }),
+
         prisma.tugCurrentStatus.findMany({
+          where: serviceCompanyFilterTug,
           include: {
             assistTug: {
               select: {
@@ -55,10 +68,7 @@ module.exports = {
       return res.status(200).json({
         status: true,
         message: "Success get live monitoring data",
-        data: {
-          pilots,
-          tugs,
-        },
+        data: { pilots, tugs, user },
       });
     } catch (error) {
       console.error("Monitoring getAll error:", error);
