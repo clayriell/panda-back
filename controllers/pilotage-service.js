@@ -788,8 +788,10 @@ module.exports = {
         const now = new Date();
         return new Date(now.getTime() + 7 * 60 * 60 * 1000);
       }
+
       const user = req.user;
       const { id } = req.params;
+
       const service = await prisma.pilotageService.findUnique({
         where: { id: Number(id) },
       });
@@ -800,32 +802,58 @@ module.exports = {
           message: "Service not found",
         });
       }
+
       if (user.companyId !== service.companyId) {
         return res.status(403).json({
           status: false,
           message: "Forbidden user access. check your company",
         });
       }
+
       if (service.status !== "APPROVED") {
         return res.status(400).json({
-          status: true,
+          status: false,
           message: "Invalid Service Status",
         });
       }
 
-      const updatedService = await prisma.pilotageService.update({
-        where: { id: Number(id) },
-        data: {
-          pilotId: Number(user.id),
-          status: "IN_PROCESS",
-          startDate: nowUtcPlus7(),
-          startTime: nowUtcPlus7(),
-        },
+      const result = await prisma.$transaction(async (tx) => {
+        // 1️⃣ Update service (record resmi)
+        const updatedService = await tx.pilotageService.update({
+          where: { id: Number(id) },
+          data: {
+            pilotId: Number(user.id),
+            status: "IN_PROCESS",
+            startDate: nowUtcPlus7(),
+            startTime: nowUtcPlus7(),
+          },
+        });
+
+        // 2️⃣ UPSERT pilot current status (LIVE STATE)
+        await tx.pilotCurrentStatus.upsert({
+          where: {
+            userId: Number(user.id),
+          },
+          update: {
+            status: "WORKING",
+            pilotageServiceId: updatedService.id,
+            startTime: nowUtcPlus7(),
+          },
+          create: {
+            userId: Number(user.id),
+            status: "WORKING",
+            pilotageServiceId: updatedService.id,
+            startTime: nowUtcPlus7(),
+          },
+        });
+
+        return updatedService;
       });
+
       return res.status(200).json({
         status: true,
         message: "Success update onBoard",
-        data: updatedService,
+        data: result,
       });
     } catch (error) {
       console.error("Error starting pilotage service:", error);
@@ -836,16 +864,19 @@ module.exports = {
       });
     }
   },
+
   offBoard: async (req, res) => {
     try {
       function nowUtcPlus7() {
         const now = new Date();
         return new Date(now.getTime() + 7 * 60 * 60 * 1000);
       }
+
       const user = req.user;
       const { id } = req.params;
       const { note, rate, signatureImage } = req.body;
       const token = crypto.randomBytes(16).toString("hex");
+
       const service = await prisma.pilotageService.findUnique({
         where: { id: Number(id) },
       });
@@ -856,63 +887,91 @@ module.exports = {
           message: "Service not found",
         });
       }
+
       if (user.id !== service.pilotId) {
         return res.status(401).json({
           status: false,
           message: "Invalid Pilot data, please check pilot on board",
         });
       }
+
       if (user.companyId !== service.companyId) {
         return res.status(403).json({
           status: false,
           message: "Forbidden user access. check your company",
         });
       }
+
       if (service.status !== "IN_PROCESS") {
         return res.status(400).json({
-          status: true,
+          status: false,
           message: "Invalid Service Status",
         });
       }
+
       if (!signatureImage) {
         return res.status(400).json({
           status: false,
           message: "Master signature cannot be empty",
         });
       }
-      const updatedService = await prisma.pilotageService.update({
-        where: { id: Number(id) },
-        data: {
-          pilotId: Number(user.id),
-          status: "COMPLETED",
-          endDate: nowUtcPlus7(),
-          endTime: nowUtcPlus7(),
-          note,
-          rate,
-        },
+
+      const result = await prisma.$transaction(async (tx) => {
+        const updatedService = await tx.pilotageService.update({
+          where: { id: Number(id) },
+          data: {
+            status: "COMPLETED",
+            endDate: nowUtcPlus7(),
+            endTime: nowUtcPlus7(),
+            note,
+            rate,
+          },
+        });
+
+        await tx.pilotCurrentStatus.upsert({
+          where: {
+            userId: Number(user.id),
+          },
+          update: {
+            status: "STAND_BY",
+            pilotageServiceId: null,
+            startTime: null,
+          },
+          create: {
+            userId: Number(user.id),
+            status: "STAND_BY",
+            pilotageServiceId: null,
+            startTime: null,
+          },
+        });
+
+        // 3️⃣ Signature documents
+        await tx.docSignature.create({
+          data: {
+            userId: user.id,
+            pilotageServiceId: Number(id),
+            signedAt: new Date(),
+            token,
+            type: "PILOT",
+          },
+        });
+
+        await tx.docSignature.create({
+          data: {
+            pilotageServiceId: Number(id),
+            signedAt: new Date(),
+            type: "MASTER",
+            signatureImage,
+          },
+        });
+
+        return updatedService;
       });
 
-      const pilotSignDocument = await prisma.docSignature.create({
-        data: {
-          userId: user.id,
-          pilotageServiceId: Number(id),
-          signedAt: new Date(),
-          token: token,
-          type: "PILOT",
-        },
-      });
-      const masterSignDocument = await prisma.docSignature.create({
-        data: {
-          pilotageServiceId: Number(id),
-          signedAt: new Date(),
-          type: "MASTER",
-          signatureImage: signatureImage,
-        },
-      });
       return res.status(200).json({
-        status: false,
+        status: true,
         message: "Success completing pilotage service",
-        data: updatedService,
+        data: result,
       });
     } catch (error) {
       console.error("Error completing pilotage service:", error);

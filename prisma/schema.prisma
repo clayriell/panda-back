@@ -72,6 +72,8 @@ model PilotageService {
   agency         Agency @relation(fields:[agencyId], references:[id])
   pilot          User?   @relation(fields: [pilotId], references: [id])
   signatures     DocSignature[]
+    pilotCurrentStatus   PilotCurrentStatus?
+    tugCurrentStatuses   TugCurrentStatus[]
 }
 
 model ShipDetail {
@@ -184,23 +186,26 @@ model DocumentCounter {
 
 model PilotCurrentStatus {
   userId             Int      @id
-  pilotageServiceId  Int?
+  pilotageServiceId  Int?     @unique
   status             CurrentPilotStatus
   startTime          DateTime?
   updatedAt          DateTime @updatedAt
 
-  user               User     @relation(fields: [userId], references: [id])
+  user               User @relation(fields: [userId], references: [id])
+  pilotageService    PilotageService? @relation(fields: [pilotageServiceId], references: [id])
 }
 
 model TugCurrentStatus {
   assistTugId        Int      @id
-  pilotageServiceId  Int?
+  pilotageServiceId  Int?     @unique
   status             CurrentTugStatus
   startTime          DateTime?
   updatedAt          DateTime @updatedAt
 
   assistTug          AssistTug @relation(fields: [assistTugId], references: [id])
+  pilotageService    PilotageService? @relation(fields: [pilotageServiceId], references: [id])
 }
+
 
 enum Area {
   TANJUNG_UNCANG

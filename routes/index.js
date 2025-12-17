@@ -10,7 +10,8 @@ const assistTugRouter = require("./assist-tug");
 const companyRouter = require("./company");
 const tugServiceRouter = require("./tug-service");
 const validationRouter = require("./validation");
-const {getForm} =  require("../controllers/pilotage-service");
+const currentStatus = require("./current-status");
+const { getForm } = require("../controllers/pilotage-service");
 // Mount semua route
 router.use("/auth", authRouter);
 router.use("/user", userRouter);
@@ -21,6 +22,7 @@ router.use("/company", companyRouter);
 router.use("/pilotage-service", pilotageServiceRouter);
 router.use("/tug-service", tugServiceRouter);
 router.use("/validate", validationRouter);
-router.use("/service/:id", getForm)
+router.use("/service/:id", getForm);
+router.use("/monitoring", currentStatus);
 
 module.exports = router;

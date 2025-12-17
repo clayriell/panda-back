@@ -96,7 +96,7 @@ module.exports = {
           assistTug: {
             masterId: Number(user.id),
           },
-          tugService: { 
+          tugService: {
             status: {
               notIn: ["REQUESTED", "COMPLETED", "REJECTED", "CANCELED"],
             },
@@ -605,6 +605,24 @@ module.exports = {
           include: { tugService: true },
         });
 
+        // 6. UPSERT CURRENT STATUS TUG (INI YANG PENTING)
+        await tx.tugCurrentStatus.upsert({
+          where: {
+            assistTugId: assistTug.id, // harus UNIQUE
+          },
+          update: {
+            status: "ON_MOB",
+            pilotageServiceId: updateServiceDetail.tugService.pilotageServiceId,
+            startTime: nowUtcPlus7(),
+          },
+          create: {
+            assistTugId: assistTug.id,
+            status: "ON_MOB",
+            pilotageServiceId: updateServiceDetail.tugService.pilotageServiceId,
+            startTime: nowUtcPlus7(),
+          },
+        });
+
         return updateServiceDetail;
       });
 
@@ -676,6 +694,21 @@ module.exports = {
           },
           include: { tugService: true },
         });
+        await tx.tugCurrentStatus.upsert({
+          where: {
+            assistTugId: assistTug.id,
+          },
+          update: {
+            status: "WORKING",
+            pilotageServiceId: updated.tugService.pilotageServiceId,
+          },
+          create: {
+            assistTugId: assistTug.id,
+            status: "WORKING",
+            pilotageServiceId: updated.tugService.pilotageServiceId,
+            startTime: updated.mobTime ?? nowUtcPlus7(),
+          },
+        });
 
         return updated;
       });
@@ -739,6 +772,22 @@ module.exports = {
             status: "ON_DEMOB",
           },
           include: { tugService: true },
+        });
+        await tx.tugCurrentStatus.upsert({
+          where: {
+            assistTugId: assistTug.id,
+          },
+          update: {
+            status: "ON_DEMOB",
+            pilotageServiceId: updated.tugService.pilotageServiceId,
+            // startTime tetap (dipakai hitung jam kerja)
+          },
+          create: {
+            assistTugId: assistTug.id,
+            status: "ON_DEMOB",
+            pilotageServiceId: updated.tugService.pilotageServiceId,
+            startTime: updated.mobTime ?? nowUtcPlus7(),
+          },
         });
 
         return updated;
@@ -820,6 +869,29 @@ module.exports = {
           include: { tugService: true },
         });
 
+        const currentStatus = await tx.tugCurrentStatus.findUnique({
+          where: { assistTugId: assistTug.id },
+        });
+
+        let workingHours = null;
+
+        if (currentStatus?.startTime) {
+          workingHours =
+            (nowUtcPlus7().getTime() -
+              new Date(currentStatus.startTime).getTime()) /
+            (1000 * 60 * 60);
+        }
+
+        await tx.tugCurrentStatus.update({
+          where: {
+            assistTugId: assistTug.id,
+          },
+          data: {
+            status: "STAND_BY",
+            pilotageServiceId: null,
+            startTime: null,
+          },
+        });
         // 2. Create sign document
         await tx.docSignature.create({
           data: {
