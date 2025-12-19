@@ -187,7 +187,10 @@ module.exports = {
           message: "Tug service not found.",
         });
       }
-      if (user.companyId !== service.pilotageService.companyId) {
+      if (
+        user.companyId !== service.pilotageService.companyId &&
+        user.role !== "SYS_ADMIN"
+      ) {
         return res.status(403).json({
           status: false,
           message: "Forbidden user access, check your company",

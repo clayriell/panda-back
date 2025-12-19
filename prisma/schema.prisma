@@ -72,8 +72,8 @@ model PilotageService {
   agency         Agency @relation(fields:[agencyId], references:[id])
   pilot          User?   @relation(fields: [pilotId], references: [id])
   signatures     DocSignature[]
-    pilotCurrentStatus   PilotCurrentStatus?
-    tugCurrentStatuses   TugCurrentStatus[]
+  pilotCurrentStatus   PilotCurrentStatus?
+  tugCurrentStatuses   TugCurrentStatus[]
 }
 
 model ShipDetail {
@@ -148,15 +148,17 @@ model User {
   pilotageServices PilotageService[]
   signatures     DocSignature[]
   pilotCurrentStatus   PilotCurrentStatus?
+  userLogs    ServiceLog[]
 }
 
 model ServiceLog {
   id          Int      @id @default(autoincrement())
   serviceId   Int?
-  serviceType String
-  userId      Int
+  serviceType ServiceTypeLogs
+  userId      Int?
   action      String
-  createdAt   DateTime @default(now())
+  createdAt   DateTime @default(now())  
+  user        User?            @relation(fields: [userId], references: [id])
 
   @@index([serviceType, serviceId])
 }
@@ -272,4 +274,12 @@ enum CurrentTugStatus {
   ON_MOB
   WORKING
   ON_DEMOB
+}
+
+enum ServiceTypeLogs {
+  PILOTAGE
+  TUG
+  SYS_PILOTAGE
+  SYS_TUGS
+  OTHER
 }

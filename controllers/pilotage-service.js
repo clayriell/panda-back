@@ -3,7 +3,9 @@ const crypto = require("crypto");
 const QRCode = require("qrcode");
 const { generateDocumentNumber } = require("../utils/documentNumberGenerator");
 const puppeteer = require("puppeteer");
-const e = require("express");
+const { nowUtcPlus7 } = require("../utils/date");
+const { log } = require("console");
+
 require("dotenv").config();
 const baseUrl = process.env.APP_URL;
 module.exports = {
@@ -132,22 +134,15 @@ module.exports = {
     try {
       const user = req.user;
       const { id } = req.params;
+      const serviceId = Number(id);
 
       const service = await prisma.pilotageService.findUnique({
-        where: { id: Number(id) },
+        where: { id: serviceId },
         include: {
           pilot: { select: { name: true } },
           shipDetails: true,
-          agency: {
-            select: {
-              name: true,
-            },
-          },
-          terminalStart: {
-            select: {
-              name: true,
-            },
-          },
+          agency: { select: { name: true } },
+          terminalStart: { select: { name: true } },
           terminalEnd: { select: { name: true } },
           tugServices: {
             select: {
@@ -172,23 +167,46 @@ module.exports = {
       if (!service) {
         return res.status(404).json({
           status: false,
-          mesasge: "pilotage service not found",
+          message: "Pilotage service not found",
         });
       }
 
-      if (user.companyId !== service.companyId) {
+      if (user.companyId !== service.companyId && user.role !== "SYS_ADMIN") {
         return res.status(403).json({
           status: false,
           message: "Forbidden access user, please check your company",
         });
       }
 
+      // 🔹 ambil service logs (manual polymorphic)
+      const logs = await prisma.serviceLog.findMany({
+        where: {
+          serviceType: "PILOTAGE",
+          serviceId: serviceId,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      });
+
       return res.status(200).json({
         status: true,
-        message: "success get pilotage service detail",
-        data: service,
+        message: "Success get pilotage service detail",
+        data: {
+          ...service,
+          logs, // 👈 ditambahkan di response
+        },
       });
     } catch (error) {
+      console.error("getDetail error:", error);
       return res.status(500).json({
         status: false,
         message: "Internal server error",
@@ -196,6 +214,7 @@ module.exports = {
       });
     }
   },
+
   getForm: async (req, res) => {
     try {
       const id = Number(req.params.id);
@@ -487,7 +506,7 @@ module.exports = {
       // Ambil service + relasi tugServices untuk validasi awal
       const serviceExist = await prisma.pilotageService.findUnique({
         where: { id: Number(id) },
-        include: { tugServices: true },
+        // include: { tugServices: true },
       });
 
       if (!serviceExist) {
@@ -525,6 +544,16 @@ module.exports = {
             status: "APPROVED",
             createdBy: user.id,
           }, // kita butuh id tugService kalau ada
+        });
+
+        const logs = await tx.serviceLog.create({
+          data: {
+            serviceId: serviceExist.id,
+            serviceType: "PILOTAGE",
+            userId: user.id,
+            action: `${user.username} approved service.`,
+            createdAt: nowUtcPlus7(),
+          },
         });
 
         // Optional: re-fetch biar relasi yang dikembalikan sudah up-to-date
@@ -635,99 +664,121 @@ module.exports = {
     const token = crypto.randomBytes(16).toString("hex");
 
     try {
-      const service = await prisma.pilotageService.findUnique({
-        where: { id: Number(id) },
+      const result = await prisma.$transaction(async (tx) => {
+        const service = await tx.pilotageService.findUnique({
+          where: { id: Number(id) },
+        });
+
+        if (!service) {
+          throw new Error("SERVICE_NOT_FOUND");
+        }
+
+        if (user.companyId !== service.companyId) {
+          throw new Error("FORBIDDEN");
+        }
+
+        if (service.status !== "COMPLETED") {
+          throw new Error("INVALID_STATUS");
+        }
+
+        if (service.docNumber) {
+          throw new Error("DOCUMENT_ALREADY_REGISTERED");
+        }
+
+        // 🔹 company code mapping (lebih rapi)
+        const companyCodeMap = {
+          1: "MDH",
+          2: "PEL-ID-BTM",
+          3: "BDP",
+          4: "GSS",
+          5: "SIS",
+          6: "SCP",
+        };
+
+        const companyCode = companyCodeMap[service.companyId];
+        if (!companyCode) {
+          throw new Error("INVALID_COMPANY_CODE");
+        }
+
+        // 🔹 generate document number
+        const docNumber = await generateDocumentNumber(companyCode);
+
+        const updatedService = await tx.pilotageService.update({
+          where: { id: service.id },
+          data: {
+            docNumber,
+          },
+        });
+
+        // 🔹 find manager
+        const manager = await tx.user.findFirst({
+          where: {
+            companyId: service.companyId,
+            role: "MANAGER",
+          },
+        });
+
+        if (!manager) {
+          throw new Error("MANAGER_NOT_FOUND");
+        }
+
+        // 🔹 create manager signature
+        await tx.docSignature.create({
+          data: {
+            userId: manager.id,
+            pilotageServiceId: service.id,
+            signedAt: nowUtcPlus7(),
+            token,
+            type: "MANAGER",
+          },
+        });
+
+        // 🔹 service log
+        await tx.serviceLog.create({
+          data: {
+            serviceId: service.id,
+            serviceType: "PILOTAGE",
+            userId: user.id,
+            action: `${user.username} registered service document`,
+            createdAt: nowUtcPlus7(),
+          },
+        });
+
+        return {
+          docNumber,
+          serviceId: service.id,
+        };
       });
 
-      if (!service) {
-        return res.status(404).json({
-          status: false,
-          message: "Service not found",
-        });
-      }
-      if (service.docNumber !== null) {
-        return res.status(400).json({
-          status: false,
-          message: "Document already registered",
-        });
-      }
-      if (user.companyId !== service.companyId) {
-        return res.status(401).json({
-          status: false,
-          message: "Forbidden access user, please check your company",
-        });
-      }
-      if (service.status !== "COMPLETED") {
-        return res.status(400).json({
-          status: false,
-          message: "Invalid service status",
-        });
-      }
-      let companyCode = "";
-
-      switch (service.companyId) {
-        case 1:
-          companyCode = "MDH";
-          break;
-        case 2:
-          companyCode = "PEL-ID-BTM";
-          break;
-        case 3:
-          companyCode = "BDP";
-          break;
-        case 4:
-          companyCode = "GSS";
-          break;
-        case 5:
-          companyCode = "SIS";
-          break;
-        case 6:
-          companyCode = "SCP";
-          break;
-      }
-      const docNumber = await generateDocumentNumber(companyCode);
-      const updatedService = await prisma.pilotageService.update({
-        where: { id: Number(id) },
-        data: {
-          docNumber: docNumber,
-        },
-      });
-      const managerExist = await prisma.user.findFirst({
-        where: {
-          companyId: Number(user.companyId),
-          role: "MANAGER",
-        },
-      });
-
-      if (!managerExist) {
-        return res.status(404).json({
-          status: false,
-          message: "manager account not found",
-        });
-      }
-      const signManager = await prisma.docSignature.create({
-        data: {
-          userId: managerExist.id,
-          pilotageServiceId: Number(id),
-          signedAt: new Date(),
-          token: token,
-          type: "MANAGER",
-        },
-      });
       return res.status(200).json({
         status: true,
         message: "Success register document",
-        docNumber,
+        data: result,
       });
     } catch (error) {
       console.error("Error registering service document:", error);
-      return res.status(500).json({
+
+      const errorMap = {
+        SERVICE_NOT_FOUND: [404, "Service not found"],
+        FORBIDDEN: [403, "Forbidden access user, please check your company"],
+        INVALID_STATUS: [400, "Invalid service status"],
+        DOCUMENT_ALREADY_REGISTERED: [400, "Document already registered"],
+        MANAGER_NOT_FOUND: [404, "Manager account not found"],
+        INVALID_COMPANY_CODE: [400, "Invalid company configuration"],
+      };
+
+      const [status, message] = errorMap[error.message] || [
+        500,
+        "Internal server error",
+      ];
+
+      return res.status(status).json({
         status: false,
-        message: "Internal server error",
-        error: error.message,
+        message,
       });
     }
   },
+
   submit: async (req, res) => {
     try {
       const user = req.user;
@@ -784,11 +835,6 @@ module.exports = {
   //PILOT ACTION
   onBoard: async (req, res) => {
     try {
-      function nowUtcPlus7() {
-        const now = new Date();
-        return new Date(now.getTime() + 7 * 60 * 60 * 1000);
-      }
-
       const user = req.user;
       const { id } = req.params;
 
@@ -867,11 +913,6 @@ module.exports = {
 
   offBoard: async (req, res) => {
     try {
-      function nowUtcPlus7() {
-        const now = new Date();
-        return new Date(now.getTime() + 7 * 60 * 60 * 1000);
-      }
-
       const user = req.user;
       const { id } = req.params;
       const { note, rate, signatureImage } = req.body;
