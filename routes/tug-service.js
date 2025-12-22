@@ -21,15 +21,19 @@ const {
 const router = express.Router();
 
 //Tug Service
-router.get("/", authenticate, mustRole("TUG_MASTER"), getServiceByTugMaster);
-router.get("/sys-all", authenticate, mustRole("SYS_ADMIN"), getAll);
+router.get(
+  "/",
+  authenticate,
+  mustRole("SYS_ADMIN", "ADMIN", "MANAGER"),
+  getAll
+);
 router.get("/all", authenticate, getServiceApproved);
 router.get("/sys-requested", authenticate, getAllRequested);
 router.get("/requested", authenticate, getServiceRequested);
 router.get("/:id/detail", authenticate, getDetail);
 router.get("/company", authenticate, getByCompany);
 router.get("/:id/submit", authenticate, submit);
-router.post("/", authenticate, mustRole("ADMIN"), create); 
+router.post("/", authenticate, mustRole("ADMIN"), create);
 
 //Tug Service Detail action
 router.put("/:id/approve", authenticate, mustRole("ADMIN"), approve);

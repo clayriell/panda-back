@@ -4,163 +4,105 @@ const QRCode = require("qrcode");
 const { generateDocumentNumber } = require("../utils/documentNumberGenerator");
 const puppeteer = require("puppeteer");
 const { nowUtcPlus7 } = require("../utils/date");
-const { log } = require("console");
 
 require("dotenv").config();
 const baseUrl = process.env.APP_URL;
 module.exports = {
   // PILOTAGE SERVICE ACTION
+
   getAll: async (req, res, next) => {
     try {
-      const pilotageService = await prisma.pilotageService.findMany({
-        where: { status: {} },
+      const user = req.user;
+      const { status, page = 1, limit = 10 } = req.query;
+
+      const where = {};
+      const superAdmin = user.role === "SYS_ADMIN";
+
+      // 🔐 scope company
+      if (!superAdmin) {
+        where.companyId = user.companyId;
+      }
+
+      // 🔎 filter status
+      if (status) {
+        where.status = Array.isArray(status) ? { in: status } : status;
+      }
+
+      const pageNumber = Number(page);
+      const pageSize = Number(limit);
+      const skip = (pageNumber - 1) * pageSize;
+
+      // 🔢 total count (untuk pagination FE)
+      const total = await prisma.pilotageService.count({ where });
+
+      const services = await prisma.pilotageService.findMany({
+        where,
+        skip,
+        take: pageSize,
         include: {
-          pilot: { select: { name: true } },
-          agency: true,
-          terminalStart: true,
-          terminalEnd: true,
           shipDetails: true,
-          tugServices: {
-            include: { tugDetails: { include: { assistTug: true } } },
+          company: true,
+          agency: true,
+          activityDetails: {
+            include: { terminalStart: true, terminalEnd: true },
           },
+          tugServices: true,
         },
         orderBy: { id: "desc" },
       });
 
       return res.status(200).json({
         status: true,
-        message: "Success get all pilotage data",
-        data: pilotageService,
-      });
-    } catch (error) {
-      console.error("Error fetching pilotageService:", error);
-      next(error); // diteruskan ke middleware error global
-    }
-  },
-  getRequestedServices: async (req, res, next) => {
-    try {
-      const pilotageService = await prisma.pilotageService.findMany({
-        where: { status: "REQUESTED" },
-        include: {
-          pilot: { select: { name: true } },
-          agency: true,
-          terminalStart: true,
-          terminalEnd: true,
-          shipDetails: true,
-          tugServices: {
-            include: { tugDetails: { include: { assistTug: true } } },
-          },
+        message: "Success get pilotage services",
+        data: services,
+        meta: {
+          page: pageNumber,
+          limit: pageSize,
+          total,
+          totalPages: Math.ceil(total / pageSize),
         },
-        orderBy: { id: "desc" },
-      });
-
-      return res.status(200).json({
-        status: true,
-        message: "Success get requested pilotage data",
-        data: pilotageService,
       });
     } catch (error) {
-      console.error("Error fetching pilotageService:", error);
-      next(error); // diteruskan ke middleware error global
+      console.error("Error fetching pilotage services:", error);
+      next(error);
     }
   },
-  getService: async (req, res) => {
+  getDetail: async (req, res, next) => {
     try {
       const user = req.user;
-      const service = await prisma.pilotageService.findMany({
-        where: {
-          companyId: Number(user.companyId),
-          status: { notIn: ["REQUESTED", "CANCELED", "REJECTED"] },
-        },
-        include: {
-          agency: true,
-          terminalStart: true,
-          terminalEnd: true,
-          shipDetails: true,
-          tugServices: {
-            include: { tugDetails: { include: { assistTug: true } } },
-          },
-          pilot: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      });
+      const id = Number(req.params.id);
 
-      return res.status(200).json({
-        status: true,
-        message: "Success get all",
-        data: service,
-      });
-    } catch (error) {
-      return res.status(500).json({
-        status: false,
-        message: "Internal server error",
-        error: error.message,
-      });
-    }
-  },
-  getRequestedServicebByCompany: async (req, res) => {
-    try {
-      const user = req.user;
+      if (isNaN(id)) {
+        return res.status(400).json({
+          status: false,
+          message: "Invalid service id",
+        });
+      }
 
-      const service = await prisma.pilotageService.findMany({
-        where: {
-          companyId: user.companyId,
-          status: "REQUESTED",
-        },
+      const where = { id };
+
+      if (user.role !== "SYS_ADMIN") {
+        where.companyId = user.companyId;
+      }
+
+      const service = await prisma.pilotageService.findFirst({
+        where,
         include: {
+          company: true,
           agency: true,
           shipDetails: true,
-          terminalStart: true,
-          terminalEnd: true,
-        },
-      });
-      return res.status(200).json({
-        status: true,
-        message: "Success get all",
-        data: service,
-      });
-    } catch (error) {
-      return res.status(500).json({
-        status: false,
-        message: "Internal server error",
-        error: error.message,
-      });
-    }
-  },
-  getDetail: async (req, res) => {
-    try {
-      const user = req.user;
-      const { id } = req.params;
-      const serviceId = Number(id);
-
-      const service = await prisma.pilotageService.findUnique({
-        where: { id: serviceId },
-        include: {
-          pilot: { select: { name: true } },
-          shipDetails: true,
-          agency: { select: { name: true } },
-          terminalStart: { select: { name: true } },
-          terminalEnd: { select: { name: true } },
+          activityDetails: {
+            include: { terminalStart: true, terminalEnd: true },
+          },
           tugServices: {
-            select: {
-              id: true,
-              idJasa: true,
-              status: true,
+            include: {
               tugDetails: {
-                select: {
-                  assistTug: { select: { shipName: true } },
-                  connectTime: true,
-                  disconnectTime: true,
-                  status: true,
-                  activity: true,
+                include: {
+                  assistTug: true,
                 },
               },
             },
           },
-          company: { select: { name: true } },
         },
       });
 
@@ -171,333 +113,178 @@ module.exports = {
         });
       }
 
-      if (user.companyId !== service.companyId && user.role !== "SYS_ADMIN") {
+      if (service.companyId !== user.companyId) {
         return res.status(403).json({
           status: false,
-          message: "Forbidden access user, please check your company",
+          message: "Forbidden Access user. Please check your company",
         });
       }
-
-      // 🔹 ambil service logs (manual polymorphic)
-      const logs = await prisma.serviceLog.findMany({
-        where: {
-          serviceType: "PILOTAGE",
-          serviceId: serviceId,
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              username: true,
-            },
-          },
-        },
-        orderBy: {
-          createdAt: "asc",
-        },
-      });
 
       return res.status(200).json({
         status: true,
         message: "Success get pilotage service detail",
-        data: {
-          ...service,
-          logs, // 👈 ditambahkan di response
-        },
+        data: service,
       });
     } catch (error) {
-      console.error("getDetail error:", error);
-      return res.status(500).json({
-        status: false,
-        message: "Internal server error",
-        error: error.message,
-      });
+      console.error("Error fetching pilotage service detail:", error);
+      next(error);
     }
   },
 
-  getForm: async (req, res) => {
-    try {
-      const id = Number(req.params.id);
-
-      const service = await prisma.pilotageService.findFirst({
-        where: { idJasa: id },
-        include: {
-          pilot: true,
-          company: true,
-          agency: true,
-          terminalStart: true,
-          terminalEnd: true,
-          shipDetails: true,
-          signatures: true,
-          tugServices: {
-            include: {
-              tugDetails: {
-                include: { assistTug: true },
-              },
-            },
-          },
-        },
-      });
-
-      // Jika tidak ada service
-      if (!service) {
-        return res.status(404).render("notfound", {
-          message_en:
-            "Service not found, please enter a valid pilotage service id",
-          message_id:
-            "Layanan tidak ditemukan, mohon masukkan 'ID Jasa Pandu' yang benar",
-        });
-      }
-
-      // Format tanggal & waktu
-      if (service.tugServices && service.tugServices.length > 0) {
-        service.tugServices = service.tugServices.map((tugService) => {
-          tugService.tugDetails = tugService.tugDetails.map((tug) => {
-            // Format connect time
-            tug.connectTimeFormatted = tug.connectTime
-              ? new Date(tug.connectTime).toLocaleTimeString("id-ID", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : "-";
-
-            // Format disconnect time
-            tug.disconnectTimeFormatted = tug.disconnectTime
-              ? new Date(tug.disconnectTime).toLocaleTimeString("id-ID", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : "-";
-
-            return tug;
-          });
-
-          return tugService;
-        });
-      }
-      service.startDateFormatted =
-        service.startDate?.toLocaleDateString("id-ID") || "-";
-
-      service.startTimeFormatted =
-        service.startTime?.toLocaleTimeString("id-ID", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }) || "-";
-
-      service.endDateFormatted =
-        service.endDate?.toLocaleDateString("id-ID") || "-";
-
-      service.endTimeFormatted =
-        service.endTime?.toLocaleTimeString("id-ID", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }) || "-";
-      // ============================
-      //   SIGNATURE CHECK + QR CODE
-      // ============================
-      let pilotQR,
-        managerQR = null;
-      let tugMasterQRs = [];
-
-      const pilotSignature = service.signatures?.find(
-        (s) => s.type === "PILOT"
-      );
-      const managerSignature = service.signatures?.find(
-        (s) => s.type === "MANAGER"
-      );
-      const tugMasterSignatures =
-        service.signatures?.filter((s) => s.type === "TUG_MASTER") || [];
-      const masterSignature = service.signatures?.find(
-        (s) => s.type === "MASTER"
-      );
-      if (managerSignature?.token) {
-        const msUrl = `${baseUrl}/api/validate/signature/${managerSignature.token}`;
-        managerQR = await QRCode.toDataURL(msUrl);
-      }
-      if (pilotSignature?.token) {
-        // URL validasi signature
-        const psUrl = `${baseUrl}/api/validate/signature/${pilotSignature.token}`;
-        // generate QR
-        pilotQR = await QRCode.toDataURL(psUrl);
-      }
-
-      tugMasterQRs = await Promise.all(
-        tugMasterSignatures
-          .filter((sig) => sig.token) // hanya ambil yang valid
-          .map(async (sig) => {
-            const tmUrl = `${baseUrl}/api/validate/signature/${sig.token}`;
-            return await QRCode.toDataURL(tmUrl);
-          })
-      );
-
-      let logo = "/img/default-logo.jpg";
-
-      if (service.companyId === 1) {
-        logo = "/img/logo-company1.png";
-      } else if (service.companyId === 2) {
-        logo = "/img/logo-company2.png";
-      }
-
-      return res.render("form-jasa", {
-        service,
-        pilotQR,
-        managerQR,
-        tugMasterQRs,
-        masterSignature,
-        logo,
-        error: null,
-      });
-    } catch (error) {
-      console.error("Error loading form:", error);
-
-      return res.status(500).render("error", {
-        message_en: "Internal server error",
-        message_id: "Terjadi kesalahan pada server",
-        error: error.message,
-      });
-    }
-  },
-  create: async (req, res, next) => {
+  create: async (req, res) => {
     try {
       const {
         idJasa,
         agencyId,
-        activity,
-        terminalStartId,
-        terminalEndId,
-        lastPort,
-        nextPort,
-        startDate,
-        startTime,
+        description,
         companyId,
         shipDetails,
-        tugServices, // array, tapi seharusnya max 1 TugService di requirement
+        activityDetails,
+        tugService,
         useAssist,
       } = req.body;
+      function wibToDate(value) {
+        // WIB = UTC+7
+        const date = new Date(value);
+        date.setHours(date.getHours() + 7);
+        return date;
+      }
+      console.log("=== RAW req.body ===");
+      console.log(req.body);
+      console.log("=== JSON STRING ===");
+      console.log(JSON.stringify(req.body, null, 2));
 
-      const dateTime = new Date(`${startDate}T${startTime}:00Z`);
+      if (!agencyId || !companyId) {
+        return res.status(400).json({
+          status: false,
+          message: "agencyId dan companyId wajib diisi",
+        });
+      }
 
-      // 🔹 Validasi shipDetails wajib ada
       if (!Array.isArray(shipDetails) || shipDetails.length === 0) {
         return res.status(400).json({
           status: false,
-          message: "At least one ship detail is required",
+          message: "shipDetails wajib minimal 1 data",
         });
       }
 
-      const id = Number(idJasa);
-
-      const [pilotageServiceExist, tugServiceExist] = await Promise.all([
-        prisma.pilotageService.findFirst({ where: { idJasa: id } }),
-        prisma.tugService.findFirst({ where: { idJasa: id } }),
-      ]);
-
-      if (pilotageServiceExist || tugServiceExist) {
+      if (!Array.isArray(activityDetails) || activityDetails.length === 0) {
         return res.status(400).json({
           status: false,
-          message: `Service with this ID already made in ${
-            pilotageServiceExist ? "pilotage service" : "tug service"
-          }`,
+          message: "activityDetails wajib minimal 1 data",
         });
       }
-      // 🔹 Transaction
+
+      if (useAssist && !tugService) {
+        return res.status(400).json({
+          status: false,
+          message: "tugService wajib jika useAssist = true",
+        });
+      }
+
+      if (idJasa) {
+        const exist = await prisma.pilotageService.findFirst({
+          where: { idJasa: Number(idJasa) },
+        });
+
+        if (exist) {
+          return res.status(400).json({
+            status: false,
+            message: "Service dengan idJasa ini sudah ada",
+          });
+        }
+      }
+
       const result = await prisma.$transaction(async (tx) => {
-        // 1️⃣ Buat PilotageService
-        const newService = await tx.pilotageService.create({
+        const service = await tx.pilotageService.create({
           data: {
             idJasa: idJasa ? Number(idJasa) : null,
             agencyId: Number(agencyId),
-            activity,
-            terminalStartId: Number(terminalStartId),
-            terminalEndId: Number(terminalEndId),
-            lastPort,
-            nextPort,
-            startDate: dateTime,
-            startTime: dateTime,
             companyId: Number(companyId),
-            amount: 0,
+            description,
             status: "REQUESTED",
+
             shipDetails: {
-              create: shipDetails.map((detail) => ({
-                shipName: detail.shipName,
-                master: detail.master,
-                grt: detail.grt,
-                loa: detail.loa,
-                flag: detail.flag,
+              create: shipDetails.map((s) => ({
+                name: s.name,
+                master: s.master,
+                grt: s.grt,
+                loa: s.loa,
+                flag: s.flag,
+                lastPort: s.lastPort,
+                lastPortCountry: s.lastPortCountry,
+                nextPort: s.nextPort,
+                nextPortCountry: s.nextPortCountry,
+                callSign: s.callSign,
+              })),
+            },
+
+            activityDetails: {
+              create: activityDetails.map((a, index) => ({
+                terminalStartId: Number(a.terminalStartId),
+                terminalEndId: Number(a.terminalEndId),
+                activity: a.activity,
+                startTime: a.startTime ? wibToDate(a.startTime) : null,
+                sequence: index + 1,
               })),
             },
           },
-          include: { shipDetails: true },
         });
 
-        // 2️⃣ Kalau pakai assist → wajib buat TugService + TugServiceDetail
         if (useAssist) {
-          if (!Array.isArray(tugServices) || tugServices.length === 0) {
-            throw new Error("TugService wajib ada jika Assist Tug dipilih!");
-          }
-
-          // requirement: hanya 1 tugService per pilotageService
-          const tug = tugServices[0];
-
-          if (!Array.isArray(tug.tugDetails) || tug.tugDetails.length === 0) {
-            throw new Error(
-              "TugServiceDetail wajib ada jika Assist Tug dipilih!"
-            );
+          if (
+            !Array.isArray(tugService.tugDetails) ||
+            tugService.tugDetails.length === 0
+          ) {
+            throw new Error("tugDetails wajib diisi jika useAssist = true");
           }
 
           await tx.tugService.create({
             data: {
-              pilotageServiceId: newService.id,
-              idJasa: tug.idJasa ? Number(tug.idJasa) : null,
-              amount: 0,
+              pilotageServiceId: service.id,
+              idJasa: tugService.idJasa ? Number(tugService.idJasa) : null,
               status: "REQUESTED",
+              description: tugService.description,
+
               tugDetails: {
-                create: tug.tugDetails.map((det) => {
-                  if (!det.assistTugId) {
-                    throw new Error(
-                      "assistTugId wajib ada di TugServiceDetail!"
-                    );
-                  }
-                  return {
-                    assistTugId: Number(det.assistTugId),
-                    activity: det.activity || "ASSIST_BERTHING",
-                    connectTime: det.connectTime || null,
-                    disconnectTime: det.disconnectTime || null,
-                    mobTime: det.mobTime || null,
-                    demobTime: det.demobTime || null,
-                    status: "WAITING",
-                  };
-                }),
+                create: tugService.tugDetails.map((t, index) => ({
+                  assistTugId: Number(t.assistTugId),
+                  activity: t.activity,
+                  sequence: t.sequence,
+                  status: "WAITING",
+                })),
               },
             },
           });
         }
 
         return tx.pilotageService.findUnique({
-          where: { id: newService.id },
+          where: { id: service.id },
           include: {
             agency: true,
-            terminalStart: true,
-            terminalEnd: true,
+            company: true,
             shipDetails: true,
-            tugServices: { include: { tugDetails: true } },
+            activityDetails: true,
+            tugServices: {
+              include: { tugDetails: true },
+            },
           },
         });
       });
 
       return res.status(201).json({
         status: true,
-        message: "New Service created successfully",
+        message: "Pilotage Service berhasil dibuat",
         data: result,
       });
     } catch (error) {
-      // console.error("Error creating PilotageService:", error);
       return res.status(400).json({
         status: false,
-        message: error.message || "Failed to create PilotageService",
+        message: error.message || "Gagal membuat Pilotage Service",
       });
     }
   },
+
   approve: async (req, res) => {
     try {
       const { id } = req.params;
@@ -778,7 +565,148 @@ module.exports = {
       });
     }
   },
+  getForm: async (req, res) => {
+    try {
+      const id = Number(req.params.id);
 
+      const service = await prisma.pilotageService.findFirst({
+        where: { idJasa: id },
+        include: {
+          pilot: true,
+          company: true,
+          agency: true,
+          terminalStart: true,
+          terminalEnd: true,
+          shipDetails: true,
+          signatures: true,
+          tugServices: {
+            include: {
+              tugDetails: {
+                include: { assistTug: true },
+              },
+            },
+          },
+        },
+      });
+
+      // Jika tidak ada service
+      if (!service) {
+        return res.status(404).render("notfound", {
+          message_en:
+            "Service not found, please enter a valid pilotage service id",
+          message_id:
+            "Layanan tidak ditemukan, mohon masukkan 'ID Jasa Pandu' yang benar",
+        });
+      }
+
+      // Format tanggal & waktu
+      if (service.tugServices && service.tugServices.length > 0) {
+        service.tugServices = service.tugServices.map((tugService) => {
+          tugService.tugDetails = tugService.tugDetails.map((tug) => {
+            // Format connect time
+            tug.connectTimeFormatted = tug.connectTime
+              ? new Date(tug.connectTime).toLocaleTimeString("id-ID", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "-";
+
+            // Format disconnect time
+            tug.disconnectTimeFormatted = tug.disconnectTime
+              ? new Date(tug.disconnectTime).toLocaleTimeString("id-ID", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "-";
+
+            return tug;
+          });
+
+          return tugService;
+        });
+      }
+      service.startDateFormatted =
+        service.startDate?.toLocaleDateString("id-ID") || "-";
+
+      service.startTimeFormatted =
+        service.startTime?.toLocaleTimeString("id-ID", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }) || "-";
+
+      service.endDateFormatted =
+        service.endDate?.toLocaleDateString("id-ID") || "-";
+
+      service.endTimeFormatted =
+        service.endTime?.toLocaleTimeString("id-ID", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }) || "-";
+      // ============================
+      //   SIGNATURE CHECK + QR CODE
+      // ============================
+      let pilotQR,
+        managerQR = null;
+      let tugMasterQRs = [];
+
+      const pilotSignature = service.signatures?.find(
+        (s) => s.type === "PILOT"
+      );
+      const managerSignature = service.signatures?.find(
+        (s) => s.type === "MANAGER"
+      );
+      const tugMasterSignatures =
+        service.signatures?.filter((s) => s.type === "TUG_MASTER") || [];
+      const masterSignature = service.signatures?.find(
+        (s) => s.type === "MASTER"
+      );
+      if (managerSignature?.token) {
+        const msUrl = `${baseUrl}/api/validate/signature/${managerSignature.token}`;
+        managerQR = await QRCode.toDataURL(msUrl);
+      }
+      if (pilotSignature?.token) {
+        // URL validasi signature
+        const psUrl = `${baseUrl}/api/validate/signature/${pilotSignature.token}`;
+        // generate QR
+        pilotQR = await QRCode.toDataURL(psUrl);
+      }
+
+      tugMasterQRs = await Promise.all(
+        tugMasterSignatures
+          .filter((sig) => sig.token) // hanya ambil yang valid
+          .map(async (sig) => {
+            const tmUrl = `${baseUrl}/api/validate/signature/${sig.token}`;
+            return await QRCode.toDataURL(tmUrl);
+          })
+      );
+
+      let logo = "/img/default-logo.jpg";
+
+      if (service.companyId === 1) {
+        logo = "/img/logo-company1.png";
+      } else if (service.companyId === 2) {
+        logo = "/img/logo-company2.png";
+      }
+
+      return res.render("form-jasa", {
+        service,
+        pilotQR,
+        managerQR,
+        tugMasterQRs,
+        masterSignature,
+        logo,
+        error: null,
+      });
+    } catch (error) {
+      console.error("Error loading form:", error);
+
+      return res.status(500).render("error", {
+        message_en: "Internal server error",
+        message_id: "Terjadi kesalahan pada server",
+        error: error.message,
+      });
+    }
+  },
   submit: async (req, res) => {
     try {
       const user = req.user;

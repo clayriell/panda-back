@@ -29,7 +29,7 @@ module.exports = {
                 id: true,
                 shipDetails: {
                   select: {
-                    shipName: true,
+                    name: true,
                   },
                 },
                 terminalStart: { select: { name: true } },
@@ -55,7 +55,7 @@ module.exports = {
                 id: true,
                 shipDetails: {
                   select: {
-                    shipName: true,
+                    name: true,
                   },
                 },
                 activity: true,

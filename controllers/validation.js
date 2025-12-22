@@ -1,31 +1,31 @@
-const prisma = require("../config/db")
+const prisma = require("../config/db");
 
 module.exports = {
-    validateSignature: async (req, res) => {
-  const { token } = req.params;
+  validateSignature: async (req, res) => {
+    const { token } = req.params;
 
-  const signature = await prisma.docSignature.findFirst ({
-    where: { token },
-    include: {
-      user: true,
-      service: {
-        include: { shipDetails: true }
-      }
-    }
-  });
-
-  if (!signature) {
-    return res.render("sign-invalid", {
-      message: "Signature Not Found or Invalid"
+    const signature = await prisma.docSignature.findFirst({
+      where: { token },
+      include: {
+        user: true,
+        service: {
+          include: { shipDetails: true },
+        },
+      },
     });
-  }
-  res.render("sign-valid", {
-    shipName: signature.service.shipDetails?.map(s => s.shipName).join(" / ") || "-",
-    docNumber : signature.service.docNumber,
-    userName: signature.user.name,
-    userRole: signature.user.role,
-    signedAt: signature.signedAt,
-  });
-}
 
-}
+    if (!signature) {
+      return res.render("sign-invalid", {
+        message: "Signature Not Found or Invalid",
+      });
+    }
+    res.render("sign-valid", {
+      name:
+        signature.service.shipDetails?.map((s) => s.name).join(" / ") || "-",
+      docNumber: signature.service.docNumber,
+      userName: signature.user.name,
+      userRole: signature.user.role,
+      signedAt: signature.signedAt,
+    });
+  },
+};

@@ -1,7 +1,6 @@
 const express = require("express");
 const {
   getAll,
-  getRequestedServices,
   create,
   approve,
   reject,
@@ -9,8 +8,6 @@ const {
   onBoard,
   offBoard,
   submit,
-  getRequestedServicebByCompany,
-  getService,
   register,
 } = require("../controllers/pilotage-service");
 
@@ -18,11 +15,13 @@ const { authenticate } = require("../middleware/auth");
 const { mustRole } = require("../middleware/role");
 const router = express.Router();
 
-router.get("/sys-all", authenticate, mustRole("SYS_ADMIN"), getAll); // get all services by sys admin
-router.get("/sys-requested", authenticate, mustRole("SYS_ADMIN"), getRequestedServices);
-router.get("/all",authenticate, getService);
-router.get("/requested", authenticate, getRequestedServicebByCompany);
-router.get("/:id/detail", authenticate, getDetail);
+router.get(
+  "/",
+  authenticate,
+  mustRole("SYS_ADMIN", "ADMIN", "MANAGER"),
+  getAll
+);
+router.get("/:id", authenticate, getDetail);
 router.put("/:id/approve", authenticate, mustRole("ADMIN"), approve);
 router.put("/:id/reject", authenticate, mustRole("ADMIN"), reject);
 router.put("/:id/onBoard", authenticate, mustRole("PILOT"), onBoard);

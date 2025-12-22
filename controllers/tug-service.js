@@ -4,21 +4,50 @@ const crypto = require("crypto");
 module.exports = {
   //assist tug service
 
-  getAll: async (req, res) => {
+  getAll: async (req, res, next) => {
     try {
+      const user = req.user;
+      const { status, page = 1, limit = 10 } = req.query;
+
+      const where = {};
+      const superAdmin = user.role === "SYS_ADMIN";
+
+      // 🔐 scope company
+      if (!superAdmin) {
+        if (!superAdmin) {
+          where.pilotageService = {
+            companyId: user.companyId,
+          };
+        }
+      }
+
+      // 🔎 filter status
+      if (status) {
+        where.status = Array.isArray(status) ? { in: status } : status;
+      }
+
+      const pageNumber = Number(page);
+      const pageSize = Number(limit);
+      const skip = (pageNumber - 1) * pageSize;
+
+      // 🔢 total count untuk pagination
+      const total = await prisma.tugService.count({ where });
+
       const tugServices = await prisma.tugService.findMany({
+        where,
+        skip,
+        take: pageSize,
         include: {
           pilotageService: {
             select: {
-              activity: true,
+              activityDetails: {
+                include: {
+                  terminalStart: true,
+                  terminalEnd: true,
+                },
+              },
               shipDetails: true,
               agency: { select: { name: true } },
-              terminalStart: { select: { name: true } },
-              terminalEnd: { select: { name: true } },
-              lastPort: true,
-              nextPort: true,
-              startDate: true,
-              startTime: true,
             },
           },
           tugDetails: {
@@ -29,19 +58,26 @@ module.exports = {
             },
           },
         },
+        orderBy: { id: "desc" },
       });
 
       return res.status(200).json({
         status: true,
-        message: "Success get all tug service",
+        message: "Success get tug services",
         data: tugServices,
+        meta: {
+          page: pageNumber,
+          limit: pageSize,
+          total,
+          totalPages: Math.ceil(total / pageSize),
+        },
       });
     } catch (error) {
-      return res
-        .status(500)
-        .json({ status: false, message: "Internal server error" });
+      console.error("Error fetching tug services:", error);
+      next(error);
     }
   },
+
   getAllRequested: async (req, res) => {
     try {
       const user = req.user;
@@ -118,7 +154,7 @@ module.exports = {
                   startTime: true,
                   shipDetails: {
                     select: {
-                      shipName: true,
+                      name: true,
                       grt: true,
                       loa: true,
                       master: true,
